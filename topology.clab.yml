@@ -1,0 +1,65 @@
+# topology.clab.yml
+name: ssi-lab
+
+topology:
+  nodes:
+
+    # ── Firewall central (remplace pfSense) ──
+    fw-isp:
+      kind: linux
+      image: frrouting/frr:latest
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+
+    # ── Firewall CLIENT (remplace FortiGate FW_CLIENT) ──
+    fw-client:
+      kind: linux
+      image: frrouting/frr:latest
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+
+    # ── Firewall SERVER (remplace FortiGate FW_SERVER) ──
+    fw-server:
+      kind: linux
+      image: frrouting/frr:latest
+      exec:
+        - sysctl -w net.ipv4.ip_forward=1
+
+    # ── PC Client ──
+    pc-client:
+      kind: linux
+      image: alpine:3.18
+      exec:
+        - apk add --no-cache curl nmap iputils
+
+    # ── Kali (pentest) ──
+    kali:
+      kind: linux
+      image: kalilinux/kali-rolling:latest
+      exec:
+        - apt-get update -q && apt-get install -y -q nmap netcat-openbsd curl iputils-ping
+
+    # ── Serveur Web ──
+    serveur-web:
+      kind: linux
+      image: nginx:alpine
+
+    # ── Wazuh SIEM ──
+    wazuh:
+      kind: linux
+      image: wazuh/wazuh-manager:4.7.0
+
+  links:
+    # LAN CLIENT
+    - endpoints: ["pc-client:eth1",   "fw-client:eth2"]
+    - endpoints: ["kali:eth1",        "fw-client:eth3"]
+
+    # FW_CLIENT <-> FW_ISP
+    - endpoints: ["fw-client:eth1",   "fw-isp:eth1"]
+
+    # FW_ISP <-> FW_SERVER (simule WAN)
+    - endpoints: ["fw-isp:eth2",      "fw-server:eth1"]
+
+    # LAN SERVER
+    - endpoints: ["fw-server:eth2",   "serveur-web:eth1"]
+    - endpoints: ["fw-server:eth3",   "wazuh:eth1"]
