@@ -1,0 +1,245 @@
+###############################################################################
+# Docker Cyber Lab - Mini-Projet Sécurité Réseau 4ème SSI
+# Architecture : FW_ISP (pfSense-like) + FW_CLIENT + FW_SERVER + VPN IPsec
+# Auteur : Adapté pour environnement à ressources limitées (Docker)
+###############################################################################
+
+services:
+
+  # =========================================================================
+  # FW_ISP : Remplace pfSense - Firewall central, DNS, NTP, HAProxy
+  # =========================================================================
+  fw-isp:
+    build: ./fw-isp
+    container_name: fw-isp
+    hostname: fw-isp
+    privileged: true               # Nécessaire pour iptables + manipulation réseau
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      internet_net:
+        ipv4_address: 200.0.0.10   # Côté "Internet simulé"
+      wan_client_net:
+        ipv4_address: 10.10.0.1    # Passerelle pour FW_CLIENT
+      wan_server_net:
+        ipv4_address: 10.20.0.1    # Passerelle pour FW_SERVER
+      mgmt_net:
+        ipv4_address: 192.168.99.1 # Interface de management
+    volumes:
+      - ./fw-isp/logs:/var/log/fw
+    restart: unless-stopped
+
+  # =========================================================================
+  # FW_CLIENT : Remplace FortiGate côté client - VPN, DHCP, filtrage web
+  # =========================================================================
+  fw-client:
+    build: ./fw-client
+    container_name: fw-client
+    hostname: fw-client
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      wan_client_net:
+        ipv4_address: 10.10.0.2    # WAN side
+      lan_client_net:
+        ipv4_address: 192.168.10.1 # LAN CLIENT gateway
+      mgmt_net:
+        ipv4_address: 192.168.99.10
+    depends_on:
+      - fw-isp
+    volumes:
+      - ./fw-client/logs:/var/log/fw
+    restart: unless-stopped
+
+  # =========================================================================
+  # FW_SERVER : Remplace FortiGate côté serveur - VPN, NTP, sécurité avancée
+  # =========================================================================
+  fw-server:
+    build: ./fw-server
+    container_name: fw-server
+    hostname: fw-server
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+    networks:
+      wan_server_net:
+        ipv4_address: 10.20.0.2    # WAN side
+      lan_server_net:
+        ipv4_address: 192.168.20.1 # LAN SERVER gateway
+      mgmt_net:
+        ipv4_address: 192.168.99.20
+    depends_on:
+      - fw-isp
+    volumes:
+      - ./fw-server/logs:/var/log/fw
+    restart: unless-stopped
+
+  # =========================================================================
+  # CLIENT 1 : Poste de travail dans le LAN_CLIENT
+  # =========================================================================
+  client1:
+    build: ./client
+    container_name: client1
+    hostname: client1
+    cap_add:
+      - NET_ADMIN
+    networks:
+      lan_client_net:
+        ipv4_address: 192.168.10.10
+    depends_on:
+      - fw-client
+    restart: unless-stopped
+
+  # =========================================================================
+  # CLIENT 2 : Deuxième poste pour tester l'isolation inter-VLANs
+  # =========================================================================
+  client2:
+    build: ./client
+    container_name: client2
+    hostname: client2
+    cap_add:
+      - NET_ADMIN
+    networks:
+      lan_client_net:
+        ipv4_address: 192.168.10.11
+    depends_on:
+      - fw-client
+    restart: unless-stopped
+
+  # =========================================================================
+  # SERVER WEB : Serveur HTTP/HTTPS dans le LAN_SERVER
+  # =========================================================================
+  webserver:
+    build: ./server
+    container_name: webserver
+    hostname: webserver
+    cap_add:
+      - NET_ADMIN
+    networks:
+      lan_server_net:
+        ipv4_address: 192.168.20.10
+    depends_on:
+      - fw-server
+    restart: unless-stopped
+
+  # =========================================================================
+  # SERVER SSH : Serveur SSH cible pour les tests
+  # =========================================================================
+  sshserver:
+    build: ./server
+    container_name: sshserver
+    hostname: sshserver
+    cap_add:
+      - NET_ADMIN
+    networks:
+      lan_server_net:
+        ipv4_address: 192.168.20.11
+    depends_on:
+      - fw-server
+    restart: unless-stopped
+
+  # =========================================================================
+  # KALI : Machine d'attaque pour la phase 3 (pentest)
+  # Connectée au LAN_CLIENT pour simuler un attaquant interne
+  # =========================================================================
+  kali:
+    build: ./attacker
+    container_name: kali
+    hostname: kali
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW                    # Indispensable pour nmap, hping, etc.
+    networks:
+      lan_client_net:
+        ipv4_address: 192.168.10.50
+    depends_on:
+      - fw-client
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  # =========================================================================
+  # UPTIME KUMA : Monitoring (image officielle)
+  # =========================================================================
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    hostname: uptime-kuma
+    networks:
+      mgmt_net:
+        ipv4_address: 192.168.99.50
+    ports:
+      - "3001:3001"                # Accessible depuis l'hôte sur localhost:3001
+    volumes:
+      - uptime-kuma-data:/app/data
+    restart: unless-stopped
+
+###############################################################################
+# RÉSEAUX DOCKER (équivalent des sous-réseaux du lab)
+###############################################################################
+networks:
+  # Internet "simulé" - réseau auquel FW_ISP est connecté côté WAN
+  internet_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 200.0.0.0/24
+          gateway: 200.0.0.1
+
+  # Lien WAN entre FW_ISP et FW_CLIENT
+  wan_client_net:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.10.0.0/24
+
+  # Lien WAN entre FW_ISP et FW_SERVER
+  wan_server_net:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.20.0.0/24
+
+  # LAN derrière FW_CLIENT
+  lan_client_net:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 192.168.10.0/24
+
+  # LAN derrière FW_SERVER
+  lan_server_net:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 192.168.20.0/24
+
+  # Réseau de management (Out-Of-Band) - phase 2
+  mgmt_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.99.0/24
+
+volumes:
+  uptime-kuma-data:
