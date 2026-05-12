@@ -26,14 +26,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copie des configurations
-COPY dnsmasq.conf /etc/dnsmasq.conf
-COPY chrony.conf  /etc/chrony/chrony.conf
-COPY haproxy.cfg  /etc/haproxy/haproxy.cfg
-COPY rules.sh     /usr/local/bin/rules.sh
-COPY entrypoint.sh /entrypoint.sh
+COPY fw-isp/dnsmasq.conf      /etc/dnsmasq.conf
+COPY fw-isp/chrony.conf       /etc/chrony/chrony.conf
+COPY fw-isp/haproxy.cfg       /etc/haproxy/haproxy.cfg
+COPY common/net-helpers.sh    /usr/local/lib/lab-net.sh
+COPY fw-isp/rules.sh          /usr/local/bin/rules.sh
+COPY fw-isp/entrypoint.sh     /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh /usr/local/bin/rules.sh \
- && sed -i 's/\r$//' /entrypoint.sh /usr/local/bin/rules.sh /etc/dnsmasq.conf /etc/chrony/chrony.conf /etc/haproxy/haproxy.cfg \
+ && sed -i 's/\r$//' /entrypoint.sh /usr/local/bin/rules.sh /usr/local/lib/lab-net.sh /etc/dnsmasq.conf /etc/chrony/chrony.conf /etc/haproxy/haproxy.cfg \
  && mkdir -p /var/log/fw
 
 EXPOSE 53/udp 53/tcp 67/udp 123/udp 80/tcp

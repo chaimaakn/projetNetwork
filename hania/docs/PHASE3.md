@@ -2,7 +2,7 @@
 
 > **Objectif** : Adopter le rôle d'attaquant pour évaluer la robustesse de l'infrastructure. Conduire un pentest structuré (méthodologie PTES), exploiter, remédier, produire un rapport.
 
-> **Statut du dépôt** : guide de campagne. Le socle réseau et les vérifications de base sont validés, mais tous les scénarios d'exploitation et de remédiation décrits ici n'ont pas été rejoués de bout en bout sur la branche actuelle.
+> **Positionnement** : ce document sert de guide de campagne a partir d'un socle reseau deja valide. Il structure les scenarios de test offensif et les actions de remediation a mener autour du lab en service.
 
 ## ⚠️ Cadre légal
 

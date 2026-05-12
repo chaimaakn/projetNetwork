@@ -10,7 +10,9 @@ services:
   # FW_ISP : Remplace pfSense - Firewall central, DNS, NTP, HAProxy
   # =========================================================================
   fw-isp:
-    build: ./fw-isp
+    build:
+      context: .
+      dockerfile: fw-isp/Dockerfile
     container_name: fw-isp
     hostname: fw-isp
     privileged: true               # Nécessaire pour iptables + manipulation réseau
@@ -38,7 +40,9 @@ services:
   # FW_CLIENT : Remplace FortiGate côté client - VPN, DHCP, filtrage web
   # =========================================================================
   fw-client:
-    build: ./fw-client
+    build:
+      context: .
+      dockerfile: fw-client/Dockerfile
     container_name: fw-client
     hostname: fw-client
     privileged: true
@@ -66,7 +70,9 @@ services:
   # FW_SERVER : Remplace FortiGate côté serveur - VPN, NTP, sécurité avancée
   # =========================================================================
   fw-server:
-    build: ./fw-server
+    build:
+      context: .
+      dockerfile: fw-server/Dockerfile
     container_name: fw-server
     hostname: fw-server
     privileged: true

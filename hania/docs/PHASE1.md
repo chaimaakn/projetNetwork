@@ -2,7 +2,7 @@
 
 > **Objectif** : Comprendre, documenter, auditer l'architecture déployée. Aucune modification structurelle n'est apportée. Cette phase est analytique.
 
-> **Note d'état** : le lab Docker est aujourd'hui fonctionnel, mais les noms d'interfaces Docker ne sont pas stables. Quand un exemple ci-dessous mentionne `eth0` / `eth1`, vérifier d'abord les interfaces réelles avec `ip -br addr` ou les IP affectées.
+> **Repère pratique** : les scripts actifs du lab résolvent maintenant les interfaces dynamiquement a partir des IPs statiques du compose. Quand un exemple ci-dessous mentionne `eth0` / `eth1`, il s'agit d'un repere pedagogique, pas d'une hypothese de fonctionnement du code.
 
 ## 🗓️ Semaine 1 — Prise en main & Cartographie
 

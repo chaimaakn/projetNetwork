@@ -2,7 +2,7 @@
 
 > **Objectif** : Faire évoluer l'architecture vers un environnement entreprise mature avec VLANs, ACLs granulaires, filtrage web, contrôle applicatif et haute disponibilité.
 
-> **Statut du dépôt** : document de roadmap. Les extraits ci-dessous ne sont pas fusionnés dans l'état validé actuel. En particulier, ne pas réintroduire `internal: true` sur les réseaux WAN/LAN routés et ne pas supposer des interfaces `ethX` fixes.
+> **Positionnement** : ce document décrit les extensions de Phase 2 a appliquer sur le socle actuellement valide. Conserver les principes deja en place : reseaux WAN/LAN routes sans `internal: true` et resolution d'interfaces par IP plutot que par ordre `ethX`.
 
 > 💡 **Note Docker** : les VLANs natifs (802.1Q) sont possibles avec Docker mais lourds. Nous reproduisons leur **comportement fonctionnel** avec des **réseaux Docker bridge séparés**, ce qui est pédagogiquement équivalent.
 

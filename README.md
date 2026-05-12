@@ -17,7 +17,7 @@ Le périmètre opérationnel dans `hania/` couvre :
 - monitoring léger avec Uptime Kuma
 - poste d'attaque Kali et scripts de validation
 
-Les éléments suivants restent hors périmètre validé :
+Extensions possibles à partir de ce socle :
 
 - haute disponibilité `keepalived` / `conntrackd`
 - SOC / SIEM `Wazuh`
@@ -33,17 +33,18 @@ docker compose build
 docker compose up -d
 docker compose ps
 
-# Linux / macOS
-./scripts/test-connectivity.sh
-
-# Windows / PowerShell / Git Bash
+# Smoke test
 bash ./scripts/test-connectivity.sh
+
+# Validation complete
+bash ./scripts/test-full-lab.sh
 ```
 
 ## Vérifications recommandées avant commit
 
 ```bash
 docker compose ps
+bash ./scripts/test-full-lab.sh
 docker exec fw-client ipsec statusall
 docker exec client1 curl -s http://192.168.20.10
 docker exec client1 nc -zv 192.168.20.11 22

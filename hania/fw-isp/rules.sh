@@ -2,38 +2,23 @@
 # =============================================================================
 # FW_ISP - Règles iptables (équivalent Rules WAN/LAN sur pfSense)
 # =============================================================================
-# Topologie :
-#   - eth0 / internet_net  -> 200.0.0.10  (WAN simulé Internet)
-#   - eth1 / wan_client_net -> 10.10.0.1  (vers FW_CLIENT)
-#   - eth2 / wan_server_net -> 10.20.0.1  (vers FW_SERVER)
-#   - eth3 / mgmt_net      -> 192.168.99.1
+# Interfaces résolues dynamiquement à partir des IPs statiques définies dans
+# docker-compose.yml pour éviter toute dépendance à l'ordre des cartes réseau.
 # =============================================================================
 
 set -e
+. /usr/local/lib/lab-net.sh
+
 echo "[FW_ISP] Application des règles iptables..."
 
-get_if_by_ip() {
-	ip -o -4 addr show | awk -v target="$1" '$4 ~ ("^" target "/") { print $2; exit }'
-}
-
-MGMT_IF=$(get_if_by_ip 192.168.99.1)
-WAN_CLIENT_IF=$(get_if_by_ip 10.10.0.1)
-WAN_SERVER_IF=$(get_if_by_ip 10.20.0.1)
-INTERNET_IF=$(get_if_by_ip 200.0.0.10)
-
-for pair in \
-	"MGMT_IF:192.168.99.1" \
-	"WAN_CLIENT_IF:10.10.0.1" \
-	"WAN_SERVER_IF:10.20.0.1" \
-	"INTERNET_IF:200.0.0.10"
-do
-	var_name=${pair%%:*}
-	var_ip=${pair##*:}
-	if [ -z "${!var_name}" ]; then
-		echo "[FW_ISP] Interface introuvable pour ${var_ip}" >&2
-		exit 1
-	fi
-done
+require_if_by_ip MGMT_IF 192.168.99.1
+require_if_by_ip WAN_CLIENT_IF 10.10.0.1
+require_if_by_ip WAN_SERVER_IF 10.20.0.1
+require_if_by_ip INTERNET_IF 200.0.0.10
+log_if_assignment MGMT "$MGMT_IF" 192.168.99.1
+log_if_assignment WAN_CLIENT "$WAN_CLIENT_IF" 10.10.0.1
+log_if_assignment WAN_SERVER "$WAN_SERVER_IF" 10.20.0.1
+log_if_assignment INTERNET "$INTERNET_IF" 200.0.0.10
 
 # --- Reset complet des règles ---
 iptables -F
@@ -82,6 +67,13 @@ iptables -A INPUT -p tcp --dport 443 -s 192.168.99.0/24 -j ACCEPT
 iptables -A FORWARD -s 192.168.10.0/24 -o "$INTERNET_IF" -j ACCEPT
 # --- Forwarding LAN_SERVER -> Internet ---
 iptables -A FORWARD -s 192.168.20.0/24 -o "$INTERNET_IF" -j ACCEPT
+
+# --- Egress minimal des firewalls de site vers Internet ---
+# Nécessaire pour les services locaux comme Squid, curl/apt et les synchronisations.
+iptables -A FORWARD -s 10.10.0.0/24 -o "$INTERNET_IF" -p tcp -m multiport --dports 80,443 -j ACCEPT
+iptables -A FORWARD -s 10.10.0.0/24 -o "$INTERNET_IF" -p udp --dport 123 -j ACCEPT
+iptables -A FORWARD -s 10.20.0.0/24 -o "$INTERNET_IF" -p tcp -m multiport --dports 80,443 -j ACCEPT
+iptables -A FORWARD -s 10.20.0.0/24 -o "$INTERNET_IF" -p udp --dport 123 -j ACCEPT
 
 # --- Tunnel VPN IPsec : autoriser trafic chiffré entre les sites ---
 # UDP 500 (IKE) et UDP 4500 (NAT-T) entre FW_CLIENT et FW_SERVER via FW_ISP

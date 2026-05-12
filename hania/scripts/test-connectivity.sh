@@ -4,13 +4,25 @@
 # Verifie que l'architecture est fonctionnelle
 # =============================================================================
 
+set -uo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_DIR=$(cd "${SCRIPT_DIR}/.." && pwd)
+
+cd "$PROJECT_DIR"
+
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YEL='\033[1;33m'
 NC='\033[0m'
 
+FAILURES=0
+
 ok()   { echo -e "${GREEN}[OK]${NC}   $1"; }
-fail() { echo -e "${RED}[FAIL]${NC} $1"; }
+fail() {
+    echo -e "${RED}[FAIL]${NC} $1"
+    FAILURES=$((FAILURES + 1))
+}
 info() { echo -e "${YEL}[..]${NC}   $1"; }
 
 ping_check() {
@@ -52,7 +64,7 @@ ping_check client1   8.8.8.8       "client1 -> Internet (8.8.8.8)"
 echo ""
 echo "--- Tests DNS ---"
 info "Resolution DNS depuis client1"
-if docker exec client1 nslookup web.labcyber.local 192.168.99.1 2>&1 | grep -q "192.168.20.10"; then
+if docker exec client1 getent hosts web.labcyber.local 2>/dev/null | grep -q "192.168.20.10"; then
     ok "DNS resolution OK"
 else
     fail "DNS resolution KO"
@@ -70,3 +82,8 @@ echo "  docker exec -it client1 bash"
 echo "  docker exec -it kali bash"
 echo "  docker logs fw-client | tail -50"
 echo "=========================================="
+
+if [ "$FAILURES" -gt 0 ]; then
+    echo "${FAILURES} test(s) ont echoue."
+    exit 1
+fi

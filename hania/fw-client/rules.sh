@@ -2,35 +2,21 @@
 # =============================================================================
 # FW_CLIENT - Règles iptables (équivalent IPv4 Policy FortiGate)
 # =============================================================================
-# Topologie :
-#   - eth0 / wan_client_net : 10.10.0.2  (vers FW_ISP)
-#   - eth1 / lan_client_net : 192.168.10.1
-#   - eth2 / mgmt_net       : 192.168.99.10
+# Interfaces résolues dynamiquement à partir des IPs statiques définies dans
+# docker-compose.yml pour éviter toute dépendance à l'ordre des cartes réseau.
 # =============================================================================
 
 set -e
+. /usr/local/lib/lab-net.sh
+
 echo "[FW_CLIENT] Application des règles iptables..."
 
-get_if_by_ip() {
-	ip -o -4 addr show | awk -v target="$1" '$4 ~ ("^" target "/") { print $2; exit }'
-}
-
-LAN_IF=$(get_if_by_ip 192.168.10.1)
-MGMT_IF=$(get_if_by_ip 192.168.99.10)
-WAN_IF=$(get_if_by_ip 10.10.0.2)
-
-for pair in \
-	"LAN_IF:192.168.10.1" \
-	"MGMT_IF:192.168.99.10" \
-	"WAN_IF:10.10.0.2"
-do
-	var_name=${pair%%:*}
-	var_ip=${pair##*:}
-	if [ -z "${!var_name}" ]; then
-		echo "[FW_CLIENT] Interface introuvable pour ${var_ip}" >&2
-		exit 1
-	fi
-done
+require_if_by_ip LAN_IF 192.168.10.1
+require_if_by_ip MGMT_IF 192.168.99.10
+require_if_by_ip WAN_IF 10.10.0.2
+log_if_assignment LAN "$LAN_IF" 192.168.10.1
+log_if_assignment MGMT "$MGMT_IF" 192.168.99.10
+log_if_assignment WAN "$WAN_IF" 10.10.0.2
 
 iptables -F
 iptables -t nat -F

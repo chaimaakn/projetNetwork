@@ -19,9 +19,10 @@ Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + 
 ## ✅ Statut validé aujourd'hui
 
 - Fonctionnel et vérifié : `fw-isp`, `fw-client`, `fw-server`, `client1`, `client2`, `kali`, `webserver`, `sshserver`, `uptime-kuma`
-- Vérifié : routage entre zones, NAT Internet, DNS/NTP, IPsec, HTTP via VPN, SSH vers `sshserver`, publication web via HAProxy, tests de connectivité
-- Non implémenté dans l'état actuel : `keepalived` / VRRP / CARP, `Wazuh`, `Suricata`, DMZ et VLAN additionnels décrits en Phase 2
-- Les documents `PHASE2.md` et `PHASE3.md` restent des **supports de roadmap / exercices**, pas une promesse que chaque étape est déjà fusionnée dans le dépôt
+- Vérifié : routage entre zones, NAT Internet, DNS/NTP, IPsec, HTTP via VPN, SSH vers `sshserver`, publication web via HAProxy, proxy Squid, monitoring et tests automatisés
+- Les scripts actifs résolvent les interfaces dynamiquement a partir des IPs statiques du compose ; l'ordre `ethX` n'est plus une hypothèse de fonctionnement
+- Les documents `PHASE2.md` et `PHASE3.md` servent de supports d'extension et de campagne autour de ce socle validé
+- Evolutions possibles : `keepalived` / VRRP / CARP, `Wazuh`, `Suricata`, DMZ et VLAN additionnels de Phase 2
 
 ## 🗺️ Architecture déployée
 
@@ -87,14 +88,15 @@ docker compose up -d
 # 3) Vérifier que tout est UP
 docker compose ps
 
-# 4) Lancer les tests de validation (Phase 1)
+# 4) Lancer les tests de validation
 chmod +x scripts/test-connectivity.sh
+chmod +x scripts/test-full-lab.sh
 
-# Linux / macOS
-./scripts/test-connectivity.sh
-
-# Windows / PowerShell / Git Bash
+# Smoke test
 bash ./scripts/test-connectivity.sh
+
+# Validation complete
+bash ./scripts/test-full-lab.sh
 ```
 
 ### Accès aux conteneurs
@@ -122,8 +124,8 @@ docker compose logs -f fw-client
 | Document | Description |
 |---|---|
 | [`docs/PHASE1.md`](docs/PHASE1.md) | Jours 1-15 — Consolidation, audit et validation du socle actuel |
-| [`docs/PHASE2.md`](docs/PHASE2.md) | Jours 16-30 — Roadmap VLAN, ACLs avancées, filtrage web, HA |
-| [`docs/PHASE3.md`](docs/PHASE3.md) | Jours 31-45 — Guide de pentest et remédiation |
+| [`docs/PHASE2.md`](docs/PHASE2.md) | Jours 16-30 — Extensions VLAN, ACLs avancées, filtrage web, HA |
+| [`docs/PHASE3.md`](docs/PHASE3.md) | Jours 31-45 — Campagne de pentest et remédiation |
 | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Dépannage des problèmes courants |
 | [`docs/EQUIVALENCES.md`](docs/EQUIVALENCES.md) | Tableau de correspondance pfSense/FortiGate ↔ Docker |
 
@@ -150,11 +152,11 @@ docker compose down -v --rmi all
 
 | Point | Original | Docker | Impact |
 |---|---|---|---|
-| **HA pfSense (CARP)** | Possible | Non implémenté dans l'état actuel | Prévu seulement comme piste Phase 2 |
-| **HA FortiGate** | Cluster complet | Non implémenté dans l'état actuel | Prévu seulement comme piste Phase 2 |
-| **Inspection SSL/TLS profonde** | FortiGate native | Non implémenté dans l'état actuel | Squid SslBump resterait une évolution manuelle |
-| **Inspection paquet niveau ASIC** | FortiGate | Logiciel uniquement | Un IDS type Suricata reste à intégrer si besoin |
-| **SIEM / corrélation** | Plateforme dédiée | Non implémenté dans l'état actuel | `Wazuh` reste une cible Phase 4 |
+| **HA pfSense (CARP)** | Possible | Extension optionnelle | Peut etre ajoutee proprement en Phase 2 |
+| **HA FortiGate** | Cluster complet | Extension optionnelle | Peut etre ajoutee proprement en Phase 2 |
+| **Inspection SSL/TLS profonde** | FortiGate native | Extension optionnelle | Squid SslBump demanderait une integration dediee |
+| **Inspection paquet niveau ASIC** | FortiGate | Logiciel uniquement | Un IDS type Suricata peut enrichir le socle |
+| **SIEM / corrélation** | Plateforme dédiée | Extension optionnelle | `Wazuh` reste une cible naturelle de Phase 4 |
 | **Interface graphique** | GUI native | CLI + Uptime Kuma | Pédagogique différent mais formateur |
 
 ---

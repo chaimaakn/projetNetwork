@@ -2,7 +2,7 @@
 
 > Pour rédiger les rapports de soutenance et faire le lien avec la formation théorique.
 
-> **Note d'état** : ce tableau mélange les équivalences déjà présentes dans la stack validée et des équivalences cibles de roadmap. Sont actuellement présents : `iptables`, `dnsmasq`, `chrony`, `haproxy`, `strongSwan`, `squid`, `rsyslog`. Restent à intégrer si besoin : `keepalived`, `conntrackd`, `suricata`, `ClamAV`, `Wazuh/ELK`.
+> **Lecture recommandée** : ce tableau couvre a la fois le socle deja valide (`iptables`, `dnsmasq`, `chrony`, `haproxy`, `strongSwan`, `squid`, `rsyslog`) et les briques d'extension envisageables ensuite (`keepalived`, `conntrackd`, `suricata`, `ClamAV`, `Wazuh/ELK`).
 
 ## pfSense → fw-isp (Docker)
 
