@@ -1,0 +1,8 @@
+.facebook.com
+.tiktok.com
+.youtube.com
+.malware-test.com
+.phishing-example.org
+.pirate-bay.org
+.thepiratebay.org
+.torrent-tracker.io

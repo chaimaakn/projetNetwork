@@ -86,6 +86,14 @@ else
 fi
 
 echo ""
+echo "--- Hardening avance ---"
+if bash ./scripts/test-policy-hardening.sh; then
+	ok "Hardening avance"
+else
+	fail "Hardening avance"
+fi
+
+echo ""
 echo "--- Etat des services Docker ---"
 for service_name in fw-isp fw-client fw-server client1 client2 voip1 guest1 webserver sshserver dmz-web kali internet-probe uptime-kuma; do
 	check_running_service "$service_name"

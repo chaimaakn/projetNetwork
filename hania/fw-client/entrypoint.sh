@@ -37,7 +37,7 @@ dnsmasq -k -C /tmp/dnsmasq.conf &
 
 # Squid (proxy + filtrage web)
 echo "[$(date)] Démarrage de Squid (proxy/filtrage)..." | tee -a $LOG
-: > /etc/squid/blocked_domains.txt
+touch /etc/squid/blocked_domains.txt
 squid -N -f /etc/squid/squid.conf &
 
 # IPsec (strongSwan)

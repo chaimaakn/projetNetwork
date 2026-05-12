@@ -6,7 +6,7 @@
 
 > 💡 **Note Docker** : les VLANs natifs (802.1Q) sont possibles avec Docker mais lourds. Nous reproduisons leur **comportement fonctionnel** avec des **réseaux Docker bridge séparés**, ce qui est pédagogiquement équivalent.
 
-> **Statut courant** : la segmentation coeur de Phase 2 est maintenant presente dans le depot avec `vlan_voip_net`, `vlan_guest_net`, `dmz_net`, les hotes `voip1`, `guest1`, `dmz-web`, `internet-probe`, et le script de validation `scripts/test-vlan-matrix.sh`. Les blocs HA, IDS/IPS et SIEM restent les prochaines grosses tranches.
+> **Statut courant** : la segmentation coeur de Phase 2 et le hardening avance sont maintenant presents dans le depot avec `vlan_voip_net`, `vlan_guest_net`, `dmz_net`, les hotes `voip1`, `guest1`, `dmz-web`, `internet-probe`, les objets `ipset` de `fw-client`, la liste versionnee `fw-client/blocked_domains.txt`, les garde-fous egress de `fw-isp`, et les scripts `scripts/test-vlan-matrix.sh` et `scripts/test-policy-hardening.sh`. Les blocs HA, IDS/IPS et SIEM restent les prochaines grosses tranches.
 
 ## 🗓️ Semaine 4 — Segmentation VLAN (J16-J20)
 
@@ -225,6 +225,8 @@ test_flow "USERS->MGMT FW"       client1 192.168.99.10 22   DENY
 
 ### Jour 21 — ACLs granulaires sur FW_ISP
 
+**Statut depot** : deja implemente dans `fw-isp/rules.sh` avec blocage sortant FTP/Telnet/SMB/NetBIOS, `connlimit`, rate-limit ICMP et journalisation `[FW_ISP-BLOCK]`. La validation automatisee passe par `scripts/test-policy-hardening.sh`.
+
 Améliorer `fw-isp/rules.sh` avec des règles plus fines :
 
 ```bash
@@ -256,6 +258,8 @@ iptables -A FORWARD -j LOG --log-prefix "[FW_ISP-BLOCK] " -m limit --limit 5/min
 
 ### Jour 22 — ACLs avancées sur FortiGate-like
 
+**Statut depot** : deja implemente dans `fw-client/rules.sh` via des objets et groupes `ipset` (`users_net`, `voip_net`, `guest_net`, `servers_net`, `dmz_net`, `mgmt_net`, `blocked_external`, `web_ports`) utilises directement par les politiques `iptables`.
+
 Sur `fw-client/rules.sh`, ajouter le concept **address objects** et **groupes** :
 
 ```bash
@@ -285,6 +289,8 @@ iptables -A FORWARD -m set --match-set users_net src \
 ---
 
 ### Jour 23 — Filtrage web Squid
+
+**Statut depot** : deja implemente de facon versionnee via `fw-client/blocked_domains.txt`, copie a l'image par `fw-client/Dockerfile`, preserve au demarrage et valide par `scripts/test-policy-hardening.sh`.
 
 Activer le filtrage par catégories :
 
@@ -502,6 +508,6 @@ Démos live à préparer :
 |---|---|
 | ≥ 4 VLANs déployés | `docker network ls` |
 | Matrice de flux respectée | Script `test-vlan-matrix.sh` 100% OK |
-| Filtrage web actif | facebook.com bloqué via Squid |
-| Cluster HA fonctionnel | Failover testé avec mesure RTO < 10s |
+| ACLs avancees et filtrage web actif | Script `test-policy-hardening.sh` 100% OK |
+| Cluster HA fonctionnel | Extension non encore livree dans ce depot |
 | Logs centralisés | `/var/log/fw/*.log` exploitables |

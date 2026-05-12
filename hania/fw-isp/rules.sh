@@ -38,7 +38,13 @@ iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # --- ICMP autorisé (pour diagnostics) ---
 iptables -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
-iptables -A FORWARD -p icmp -j ACCEPT
+iptables -A FORWARD -p icmp -m limit --limit 5/second --limit-burst 10 -j ACCEPT
+iptables -A FORWARD -p icmp -j DROP
+
+# --- Garde-fous egress vers Internet ---
+iptables -A FORWARD -o "$INTERNET_IF" -p tcp -m multiport --dports 21,23,139,445 -j DROP
+iptables -A FORWARD -o "$INTERNET_IF" -p udp --dport 137:138 -j DROP
+iptables -A FORWARD -o "$INTERNET_IF" -p tcp --syn -m connlimit --connlimit-mask 32 --connlimit-above 50 -j DROP
 
 # --- DNS depuis les LANs vers FW_ISP ---
 iptables -A INPUT -p udp --dport 53 -s 10.10.0.0/24 -j ACCEPT
@@ -111,7 +117,7 @@ iptables -t nat -A POSTROUTING -s 10.20.0.0/24    -o "$INTERNET_IF" -j MASQUERAD
 
 # --- Logging (équivalent du log par règle pfSense) ---
 iptables -A INPUT   -m limit --limit 5/min -j LOG --log-prefix "[FW_ISP-IN-DROP] "  --log-level 4
-iptables -A FORWARD -m limit --limit 5/min -j LOG --log-prefix "[FW_ISP-FWD-DROP] " --log-level 4
+iptables -A FORWARD -m limit --limit 5/min -j LOG --log-prefix "[FW_ISP-BLOCK] " --log-level 4
 
 echo "[FW_ISP] Règles appliquées avec succès."
 iptables -L -n -v --line-numbers

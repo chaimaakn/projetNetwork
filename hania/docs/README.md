@@ -4,7 +4,7 @@
 
 ## 🎯 Objectif de cette adaptation
 
-Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, le monitoring et la base des démonstrations de pentest.
+Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, le monitoring, le hardening avance de Phase 2 et la base des démonstrations de pentest.
 
 | Composant original | Remplacement Docker | Fonction |
 |---|---|---|
@@ -22,8 +22,10 @@ Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + 
 - Vérifié : routage entre zones, NAT Internet, DNS/NTP, IPsec, HTTP via VPN, SSH vers `sshserver`, HTTP DMZ, publication web via HAProxy, proxy Squid, monitoring et tests automatisés
 - Les scripts actifs résolvent les interfaces dynamiquement a partir des IPs statiques du compose ; l'ordre `ethX` n'est plus une hypothèse de fonctionnement
 - La segmentation Phase 2 coeur est integree : VLAN VOIP, VLAN GUEST, DMZ et matrice de flux testee
+- Le hardening avance Phase 2 est livre : objets et groupes `ipset` sur `fw-client`, liste `blocked_domains.txt` versionnee pour Squid, garde-fous egress sur `fw-isp`
+- Le jeu de validation couvre maintenant `test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh` et `test-full-lab.sh`
 - Les documents `PHASE2.md` et `PHASE3.md` servent maintenant de support pour les extensions suivantes et la campagne de validation offensive
-- Evolutions possibles : `keepalived` / VRRP / CARP, `Wazuh`, `Suricata` et le durcissement avance restant de Phase 2
+- Evolutions possibles : `keepalived` / VRRP / CARP, `Wazuh`, `Suricata` et les blocs HA / IDS / SIEM restants de la roadmap
 
 ## 🗺️ Architecture déployée
 
@@ -92,6 +94,7 @@ docker compose ps
 # 4) Lancer les tests de validation
 chmod +x scripts/test-connectivity.sh
 chmod +x scripts/test-vlan-matrix.sh
+chmod +x scripts/test-policy-hardening.sh
 chmod +x scripts/test-full-lab.sh
 
 # Smoke test
@@ -99,6 +102,9 @@ bash ./scripts/test-connectivity.sh
 
 # Validation Phase 2
 bash ./scripts/test-vlan-matrix.sh
+
+# Validation du hardening avance
+bash ./scripts/test-policy-hardening.sh
 
 # Validation complete
 bash ./scripts/test-full-lab.sh
