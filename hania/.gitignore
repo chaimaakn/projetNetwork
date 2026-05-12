@@ -1,0 +1,3 @@
+fw-client/logs/*.log
+fw-isp/logs/*.log
+fw-server/logs/*.log

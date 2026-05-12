@@ -17,7 +17,7 @@ ip route add default via 10.20.0.1 || true
 # Règles iptables
 /usr/local/bin/rules.sh | tee -a $LOG
 
-service rsyslog start || true
+rsyslogd || true
 
 # Chrony en serveur NTP local
 echo "[$(date)] Démarrage chrony (NTP serveur)..." | tee -a $LOG

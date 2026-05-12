@@ -11,6 +11,27 @@
 set -e
 echo "[FW_CLIENT] Application des règles iptables..."
 
+get_if_by_ip() {
+	ip -o -4 addr show | awk -v target="$1" '$4 ~ ("^" target "/") { print $2; exit }'
+}
+
+LAN_IF=$(get_if_by_ip 192.168.10.1)
+MGMT_IF=$(get_if_by_ip 192.168.99.10)
+WAN_IF=$(get_if_by_ip 10.10.0.2)
+
+for pair in \
+	"LAN_IF:192.168.10.1" \
+	"MGMT_IF:192.168.99.10" \
+	"WAN_IF:10.10.0.2"
+do
+	var_name=${pair%%:*}
+	var_ip=${pair##*:}
+	if [ -z "${!var_name}" ]; then
+		echo "[FW_CLIENT] Interface introuvable pour ${var_ip}" >&2
+		exit 1
+	fi
+done
+
 iptables -F
 iptables -t nat -F
 iptables -t mangle -F
@@ -31,13 +52,13 @@ iptables -A INPUT   -p icmp -j ACCEPT
 iptables -A FORWARD -p icmp -j ACCEPT
 
 # Management : SSH/HTTPS uniquement depuis mgmt_net
-iptables -A INPUT -i eth2 -p tcp --dport 22  -j ACCEPT
-iptables -A INPUT -i eth2 -p tcp --dport 443 -j ACCEPT
+iptables -A INPUT -i "$MGMT_IF" -p tcp --dport 22  -j ACCEPT
+iptables -A INPUT -i "$MGMT_IF" -p tcp --dport 443 -j ACCEPT
 
 # DNS et DHCP côté LAN
-iptables -A INPUT -i eth1 -p udp --dport 53 -j ACCEPT
-iptables -A INPUT -i eth1 -p udp --dport 67 -j ACCEPT
-iptables -A INPUT -i eth1 -p tcp --dport 3128 -j ACCEPT  # Squid proxy
+iptables -A INPUT -i "$LAN_IF" -p udp --dport 53 -j ACCEPT
+iptables -A INPUT -i "$LAN_IF" -p udp --dport 67 -j ACCEPT
+iptables -A INPUT -i "$LAN_IF" -p tcp --dport 3128 -j ACCEPT  # Squid proxy
 
 # IPsec : ports IKE et NAT-T
 iptables -A INPUT -p udp --dport 500  -j ACCEPT
@@ -45,7 +66,12 @@ iptables -A INPUT -p udp --dport 4500 -j ACCEPT
 iptables -A INPUT -p esp -j ACCEPT
 
 # --- Forwarding LAN_CLIENT -> Internet (via FW_ISP) ---
-iptables -A FORWARD -i eth1 -o eth0 -s 192.168.10.0/24 -j ACCEPT
+iptables -A FORWARD -i "$LAN_IF" -o "$WAN_IF" -s 192.168.10.0/24 -j ACCEPT
+
+# --- DNS/NTP du LAN vers FW_ISP via le réseau de management ---
+iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d 192.168.99.1 -p udp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d 192.168.99.1 -p tcp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d 192.168.99.1 -p udp --dport 123 -j ACCEPT
 
 # --- Forwarding LAN_CLIENT -> LAN_SERVER (via tunnel VPN) ---
 # strongSwan utilise XFRM, le trafic passera donc par les politiques IPsec
@@ -55,7 +81,7 @@ iptables -A FORWARD -s 192.168.20.0/24 -d 192.168.10.0/24 -j ACCEPT
 # --- NAT pour Internet uniquement (PAS pour le tunnel VPN) ---
 # Important : on exclut 192.168.20.0/24 (LAN distant) du NAT
 iptables -t nat -A POSTROUTING -s 192.168.10.0/24 -d 192.168.20.0/24 -j ACCEPT
-iptables -t nat -A POSTROUTING -s 192.168.10.0/24 -o eth0 -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.10.0/24 -o "$WAN_IF" -j MASQUERADE
 
 # Logs
 iptables -A INPUT   -m limit --limit 5/min -j LOG --log-prefix "[FW_CLIENT-IN-DROP] "

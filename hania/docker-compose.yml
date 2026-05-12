@@ -205,34 +205,34 @@ networks:
   # Lien WAN entre FW_ISP et FW_CLIENT
   wan_client_net:
     driver: bridge
-    internal: true
     ipam:
       config:
         - subnet: 10.10.0.0/24
+          gateway: 10.10.0.254
 
   # Lien WAN entre FW_ISP et FW_SERVER
   wan_server_net:
     driver: bridge
-    internal: true
     ipam:
       config:
         - subnet: 10.20.0.0/24
+          gateway: 10.20.0.254
 
   # LAN derrière FW_CLIENT
   lan_client_net:
     driver: bridge
-    internal: true
     ipam:
       config:
         - subnet: 192.168.10.0/24
+          gateway: 192.168.10.254
 
   # LAN derrière FW_SERVER
   lan_server_net:
     driver: bridge
-    internal: true
     ipam:
       config:
         - subnet: 192.168.20.0/24
+          gateway: 192.168.20.254
 
   # Réseau de management (Out-Of-Band) - phase 2
   mgmt_net:
@@ -240,6 +240,7 @@ networks:
     ipam:
       config:
         - subnet: 192.168.99.0/24
+          gateway: 192.168.99.254
 
 volumes:
   uptime-kuma-data:

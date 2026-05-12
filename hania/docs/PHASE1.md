@@ -2,6 +2,8 @@
 
 > **Objectif** : Comprendre, documenter, auditer l'architecture déployée. Aucune modification structurelle n'est apportée. Cette phase est analytique.
 
+> **Note d'état** : le lab Docker est aujourd'hui fonctionnel, mais les noms d'interfaces Docker ne sont pas stables. Quand un exemple ci-dessous mentionne `eth0` / `eth1`, vérifier d'abord les interfaces réelles avec `ip -br addr` ou les IP affectées.
+
 ## 🗓️ Semaine 1 — Prise en main & Cartographie
 
 ### Jour 1 — Onboarding technique
@@ -10,7 +12,7 @@
 
 ```bash
 # 1) Construction des images
-cd docker-cyber-lab/
+cd hania/
 docker compose build
 
 # 2) Lancement
@@ -18,7 +20,7 @@ docker compose up -d
 docker compose ps
 
 # 3) Vérification connectivité
-./scripts/test-connectivity.sh
+bash ./scripts/test-connectivity.sh
 
 # 4) Tests manuels
 docker exec client1 ping -c 3 192.168.10.1     # client1 -> FW_CLIENT

@@ -36,6 +36,7 @@ RUN echo "<html><body><h1>LabCyber Web Server</h1><p>Serveur interne - Confident
 EXPOSE 22 80
 
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+ && sed -i 's/\r$//' /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

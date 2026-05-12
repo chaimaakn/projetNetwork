@@ -2,6 +2,8 @@
 
 > Pour rédiger les rapports de soutenance et faire le lien avec la formation théorique.
 
+> **Note d'état** : ce tableau mélange les équivalences déjà présentes dans la stack validée et des équivalences cibles de roadmap. Sont actuellement présents : `iptables`, `dnsmasq`, `chrony`, `haproxy`, `strongSwan`, `squid`, `rsyslog`. Restent à intégrer si besoin : `keepalived`, `conntrackd`, `suricata`, `ClamAV`, `Wazuh/ELK`.
+
 ## pfSense → fw-isp (Docker)
 
 | Fonction pfSense | Menu pfSense | Équivalent Docker |
@@ -34,12 +36,12 @@
 | Pre-shared Key | VPN > IPsec Tunnels > Auth | `/etc/ipsec.secrets` |
 | DHCP Server | Network > Interfaces > DHCP | `dnsmasq` (mode DHCP) |
 | Web Filter | Security Profiles > Web Filter | `squid` + ACL + blocked_domains.txt |
-| Application Control | Security Profiles > Application Control | `suricata` ou `nDPI` |
-| IPS | Security Profiles > IPS | `suricata` avec règles ET/Pro |
+| Application Control | Security Profiles > Application Control | `suricata` ou `nDPI` (roadmap) |
+| IPS | Security Profiles > IPS | `suricata` avec règles ET/Pro (roadmap) |
 | SSL Inspection | Security Profiles > SSL/SSH Inspection | `squid` SslBump (complexe) |
-| Antivirus | Security Profiles > AntiVirus | ClamAV + e2guardian |
-| Logging | Log & Report | rsyslog → fichier ou SIEM (Phase 4) |
-| HA Active-Passive | System > HA | `keepalived` + `conntrackd` |
+| Antivirus | Security Profiles > AntiVirus | ClamAV + e2guardian (roadmap) |
+| Logging | Log & Report | rsyslog → fichier ou SIEM (Phase 4 / roadmap) |
+| HA Active-Passive | System > HA | `keepalived` + `conntrackd` (roadmap) |
 | SD-WAN | Network > SD-WAN | `iproute2` policy routing + scripting |
 | FortiGuard | System > FortiGuard | N/A (services payants Fortinet) |
 
@@ -69,13 +71,13 @@
 | **VPN IPsec IKEv2** | strongSwan | Implémentation Linux native = ce qu'utilise FortiGate sous le capot |
 | **Phase 1 IKE** | section `ike=aes256-sha256-modp2048` | Algos identiques |
 | **Phase 2 ESP** | section `esp=aes256-sha256-modp2048` | Algos identiques |
-| **PFS** | `pfs=yes` + DH group ≥ 14 | Identique |
+| **PFS** | `esp=...-modp2048` | PFS implicite via le groupe DH dans la proposition ESP |
 | **DPD** | `dpdaction=restart` | Identique |
 | **Web Filter URL category** | squid `dstdomain` ACL | Pédagogique : montre la mécanique |
-| **Application Control** | Suricata + signatures | Plus formateur (on voit les règles) |
-| **HA Active/Passive** | keepalived + conntrackd | VRRP au lieu de FGCP propriétaire |
+| **Application Control** | Suricata + signatures (roadmap) | Plus formateur (on voit les règles) |
+| **HA Active/Passive** | keepalived + conntrackd (roadmap) | VRRP au lieu de FGCP propriétaire |
 | **Multi-WAN failover** | iproute2 + nfqueue scripting | Concept identique, syntaxe différente |
-| **Logging centralisé** | rsyslog → Wazuh/ELK | Phase 4 |
+| **Logging centralisé** | rsyslog → Wazuh/ELK (roadmap) | Phase 4 |
 
 ## Limites de l'analogie
 

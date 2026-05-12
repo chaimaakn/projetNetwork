@@ -12,11 +12,15 @@ echo "[$(date)] === Démarrage FW_ISP ===" | tee -a $LOG
 # Active l'IP forwarding (équivalent System > Advanced > Networking sur pfSense)
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
+# Routes statiques vers les LANs derrière les firewalls sites.
+ip route replace 192.168.10.0/24 via 10.10.0.2 || true
+ip route replace 192.168.20.0/24 via 10.20.0.2 || true
+
 # Applique les règles iptables
 /usr/local/bin/rules.sh | tee -a $LOG
 
 # Démarre rsyslog pour le logging
-service rsyslog start || true
+rsyslogd || true
 
 # Démarre chrony (NTP)
 echo "[$(date)] Démarrage de chrony (NTP)..." | tee -a $LOG

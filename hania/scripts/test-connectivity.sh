@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
-# Script de tests de connectivité - Phase 1 (Jour 1)
-# Vérifie que l'architecture est fonctionnelle
+# Script de tests de connectivite - Phase 1 (Jour 1)
+# Verifie que l'architecture est fonctionnelle
 # =============================================================================
 
 GREEN='\033[0;32m'
@@ -14,7 +14,10 @@ fail() { echo -e "${RED}[FAIL]${NC} $1"; }
 info() { echo -e "${YEL}[..]${NC}   $1"; }
 
 ping_check() {
-    local from=$1; local to=$2; local desc=$3
+    local from=$1
+    local to=$2
+    local desc=$3
+
     info "Ping depuis $from vers $to ($desc)"
     if docker exec "$from" ping -c 2 -W 3 "$to" >/dev/null 2>&1; then
         ok "$from -> $to ($desc)"
@@ -24,10 +27,9 @@ ping_check() {
 }
 
 echo "=========================================="
-echo "  Tests de connectivité - LabCyber Docker  "
+echo "  Tests de connectivite - LabCyber Docker  "
 echo "=========================================="
 
-# 1. Connectivité de base
 echo ""
 echo "--- Tests intra-LAN ---"
 ping_check client1   192.168.10.11 "client1 -> client2"
@@ -49,7 +51,7 @@ ping_check client1   8.8.8.8       "client1 -> Internet (8.8.8.8)"
 
 echo ""
 echo "--- Tests DNS ---"
-info "Résolution DNS depuis client1"
+info "Resolution DNS depuis client1"
 if docker exec client1 nslookup web.labcyber.local 192.168.99.1 2>&1 | grep -q "192.168.20.10"; then
     ok "DNS resolution OK"
 else
@@ -59,7 +61,7 @@ fi
 echo ""
 echo "--- Statut VPN IPsec ---"
 docker exec fw-client ipsec statusall 2>/dev/null | grep -E "site-to-site|ESTABLISHED|INSTALLED" || \
-    fail "VPN non établi - vérifier ipsec.conf"
+    fail "VPN non etabli - verifier ipsec.conf"
 
 echo ""
 echo "=========================================="

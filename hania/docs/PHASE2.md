@@ -2,6 +2,8 @@
 
 > **Objectif** : Faire évoluer l'architecture vers un environnement entreprise mature avec VLANs, ACLs granulaires, filtrage web, contrôle applicatif et haute disponibilité.
 
+> **Statut du dépôt** : document de roadmap. Les extraits ci-dessous ne sont pas fusionnés dans l'état validé actuel. En particulier, ne pas réintroduire `internal: true` sur les réseaux WAN/LAN routés et ne pas supposer des interfaces `ethX` fixes.
+
 > 💡 **Note Docker** : les VLANs natifs (802.1Q) sont possibles avec Docker mais lourds. Nous reproduisons leur **comportement fonctionnel** avec des **réseaux Docker bridge séparés**, ce qui est pédagogiquement équivalent.
 
 ## 🗓️ Semaine 4 — Segmentation VLAN (J16-J20)

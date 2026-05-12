@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Le client utilisera la passerelle 192.168.10.1 par défaut (FW_CLIENT)
 # Docker assigne l'IP via le compose; on ajuste juste la route au boot
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+ && sed -i 's/\r$//' /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

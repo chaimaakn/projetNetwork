@@ -49,7 +49,8 @@ RUN if [ -f /usr/share/wordlists/rockyou.txt.gz ]; then \
     fi
 
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+ && sed -i 's/\r$//' /entrypoint.sh
 
 WORKDIR /root
 ENTRYPOINT ["/entrypoint.sh"]

@@ -34,7 +34,9 @@ COPY rules.sh        /usr/local/bin/rules.sh
 COPY entrypoint.sh   /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh /usr/local/bin/rules.sh \
+ && sed -i 's/\r$//' /entrypoint.sh /usr/local/bin/rules.sh /etc/ipsec.conf /etc/ipsec.secrets /etc/dnsmasq.conf /etc/squid/squid.conf \
  && mkdir -p /var/log/fw \
+ && printf 'ha {\n    load = no\n}\n' > /etc/strongswan.d/charon/ha.conf \
  && chmod 600 /etc/ipsec.secrets
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -33,6 +33,7 @@ COPY rules.sh     /usr/local/bin/rules.sh
 COPY entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh /usr/local/bin/rules.sh \
+ && sed -i 's/\r$//' /entrypoint.sh /usr/local/bin/rules.sh /etc/dnsmasq.conf /etc/chrony/chrony.conf /etc/haproxy/haproxy.cfg \
  && mkdir -p /var/log/fw
 
 EXPOSE 53/udp 53/tcp 67/udp 123/udp 80/tcp

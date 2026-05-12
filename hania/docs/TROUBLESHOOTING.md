@@ -41,9 +41,7 @@ docker exec fw-client ipsec statusall
 sudo modprobe esp4 ah4 xfrm4_tunnel
 ```
 
-2. **Docker Desktop (Mac/Windows)** : IPsec est limité dans LinuxKit. Alternatives :
-   - Utiliser **WireGuard** à la place (plus simple, fonctionne en user-space)
-   - Voir section "Alternative WireGuard" plus bas
+2. **Docker Desktop (Mac/Windows)** : le support IPsec dépend du backend hôte. Ce lab a déjà pu fonctionner avec Docker Desktop + WSL2 ; ne basculer vers WireGuard qu'après avoir vérifié que `ipsec statusall` ne passe jamais à `ESTABLISHED` malgré une configuration correcte.
 
 3. **PSK différents** entre les deux côtés : vérifier `/etc/ipsec.secrets` est identique
 
@@ -77,6 +75,30 @@ docker exec fw-client iptables -L FORWARD -n -v
 
 # 5. Tcpdump pour voir le trafic
 docker exec fw-client tcpdump -i any -n host 192.168.10.10 and host 192.168.20.10
+```
+
+---
+
+## Problème 3 bis : le trafic inter-réseaux ne traverse pas les firewalls
+
+**Symptômes** :
+
+- `client1` joint bien sa passerelle locale
+- les routes semblent correctes
+- mais aucun trafic utile n'atteint le firewall suivant ou le réseau distant
+
+**Cause fréquente** : les réseaux Docker routés sont définis avec `internal: true`, ce qui casse le comportement attendu de routeur intermédiaire.
+
+**Correctif** :
+
+- ne pas mettre `internal: true` sur `wan_client_net`, `wan_server_net`, `lan_client_net` et `lan_server_net`
+- réserver `.1` aux firewalls et utiliser des passerelles Docker en `.254`
+
+```bash
+# Recréer proprement les réseaux après correction du compose
+docker compose down
+docker network prune
+docker compose up -d --build
 ```
 
 ---
@@ -144,6 +166,42 @@ chmod +x fw-*/rules.sh
 
 ---
 
+## Problème 7 bis : erreurs `^M`, `bad interpreter` ou scripts shell qui ne démarrent pas
+
+**Cause** : fichiers édités en CRLF sous Windows.
+
+**Solution** :
+
+```bash
+# Corriger ponctuellement un fichier
+sed -i 's/\r$//' fw-client/entrypoint.sh
+
+# Puis reconstruire l'image concernée
+docker compose build fw-client --no-cache
+```
+
+Le dépôt contient aussi un fichier `.gitattributes` pour forcer les fins de ligne LF sur les scripts et configs.
+
+---
+
+## Problème 7 ter : un service ou une règle cherche `eth0` / `eth1` et échoue
+
+**Cause** : l'ordre des interfaces Docker n'est pas stable ; il ne faut pas coder le lab en supposant des noms `ethX` fixes.
+
+**Diagnostic** :
+
+```bash
+docker exec fw-client ip -br addr
+docker exec fw-server ip -br addr
+```
+
+**Bonne pratique** :
+
+- détecter les interfaces par leur IP affectée
+- préférer les scripts déjà présents dans le dépôt, qui résolvent les interfaces à partir des adresses plutôt qu'à partir des noms
+
+---
+
 ## Problème 8 : Squid ne filtre pas les sites
 
 ```bash
@@ -171,7 +229,7 @@ docker exec fw-client squid -k parse
 
 ## Alternative WireGuard (si IPsec impossible)
 
-Si l'environnement (Mac, Windows, Docker Desktop) bloque IPsec, basculer en WireGuard.
+Si l'environnement bloque réellement IPsec malgré un diagnostic complet, basculer en WireGuard comme solution de repli.
 
 **Modifier `fw-client/Dockerfile`** :
 ```dockerfile

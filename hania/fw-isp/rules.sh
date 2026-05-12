@@ -12,6 +12,29 @@
 set -e
 echo "[FW_ISP] Application des règles iptables..."
 
+get_if_by_ip() {
+	ip -o -4 addr show | awk -v target="$1" '$4 ~ ("^" target "/") { print $2; exit }'
+}
+
+MGMT_IF=$(get_if_by_ip 192.168.99.1)
+WAN_CLIENT_IF=$(get_if_by_ip 10.10.0.1)
+WAN_SERVER_IF=$(get_if_by_ip 10.20.0.1)
+INTERNET_IF=$(get_if_by_ip 200.0.0.10)
+
+for pair in \
+	"MGMT_IF:192.168.99.1" \
+	"WAN_CLIENT_IF:10.10.0.1" \
+	"WAN_SERVER_IF:10.20.0.1" \
+	"INTERNET_IF:200.0.0.10"
+do
+	var_name=${pair%%:*}
+	var_ip=${pair##*:}
+	if [ -z "${!var_name}" ]; then
+		echo "[FW_ISP] Interface introuvable pour ${var_ip}" >&2
+		exit 1
+	fi
+done
+
 # --- Reset complet des règles ---
 iptables -F
 iptables -t nat -F
@@ -38,20 +61,27 @@ iptables -A INPUT -p tcp --dport 53 -s 10.10.0.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 53 -s 10.20.0.0/24 -j ACCEPT
 iptables -A INPUT -p tcp --dport 53 -s 10.20.0.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 53 -s 192.168.10.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 53 -s 192.168.10.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 53 -s 192.168.20.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 53 -s 192.168.20.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 53 -s 192.168.99.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 53 -s 192.168.99.0/24 -j ACCEPT
 
 # --- NTP depuis les LANs ---
 iptables -A INPUT -p udp --dport 123 -s 10.10.0.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 123 -s 10.20.0.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 123 -s 192.168.10.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 123 -s 192.168.20.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 123 -s 192.168.99.0/24 -j ACCEPT
 
 # --- Management : SSH/HTTPS uniquement depuis le réseau de management ---
 iptables -A INPUT -p tcp --dport 22  -s 192.168.99.0/24 -j ACCEPT
 iptables -A INPUT -p tcp --dport 443 -s 192.168.99.0/24 -j ACCEPT
 
 # --- Forwarding LAN_CLIENT -> Internet ---
-iptables -A FORWARD -s 192.168.10.0/24 -o eth0 -j ACCEPT
+iptables -A FORWARD -s 192.168.10.0/24 -o "$INTERNET_IF" -j ACCEPT
 # --- Forwarding LAN_SERVER -> Internet ---
-iptables -A FORWARD -s 192.168.20.0/24 -o eth0 -j ACCEPT
+iptables -A FORWARD -s 192.168.20.0/24 -o "$INTERNET_IF" -j ACCEPT
 
 # --- Tunnel VPN IPsec : autoriser trafic chiffré entre les sites ---
 # UDP 500 (IKE) et UDP 4500 (NAT-T) entre FW_CLIENT et FW_SERVER via FW_ISP
@@ -61,10 +91,10 @@ iptables -A FORWARD -p esp -j ACCEPT
 
 # --- NAT (équivalent Outbound NAT pfSense, mode automatique) ---
 # Tout le trafic sortant depuis les LANs est SNATé vers l'IP "Internet"
-iptables -t nat -A POSTROUTING -s 192.168.10.0/24 -o eth0 -j MASQUERADE
-iptables -t nat -A POSTROUTING -s 192.168.20.0/24 -o eth0 -j MASQUERADE
-iptables -t nat -A POSTROUTING -s 10.10.0.0/24    -o eth0 -j MASQUERADE
-iptables -t nat -A POSTROUTING -s 10.20.0.0/24    -o eth0 -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.10.0/24 -o "$INTERNET_IF" -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.20.0/24 -o "$INTERNET_IF" -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 10.10.0.0/24    -o "$INTERNET_IF" -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 10.20.0.0/24    -o "$INTERNET_IF" -j MASQUERADE
 
 # --- Logging (équivalent du log par règle pfSense) ---
 iptables -A INPUT   -m limit --limit 5/min -j LOG --log-prefix "[FW_ISP-IN-DROP] "  --log-level 4

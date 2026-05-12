@@ -4,17 +4,24 @@
 
 ## 🎯 Objectif de cette adaptation
 
-Reproduire **fidèlement** le comportement pédagogique du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Toutes les **fonctionnalités** sont préservées :
+Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, le monitoring et la base des démonstrations de pentest.
 
 | Composant original | Remplacement Docker | Fonction |
 |---|---|---|
 | **pfSense** | `fw-isp` (Debian + iptables + dnsmasq + chrony + HAProxy) | Firewall ISP, DNS, NTP, load balancer |
 | **FortiGate FW_CLIENT** | `fw-client` (Debian + iptables + strongSwan + dnsmasq + squid) | FW client, VPN IPsec, DHCP, filtrage web |
 | **FortiGate FW_SERVER** | `fw-server` (Debian + iptables + strongSwan + chrony) | FW serveur, VPN IPsec, NTP |
-| **VPN IPsec IKEv2** | strongSwan (AES-256, SHA-256, PFS modp2048) | Identique |
+| **VPN IPsec IKEv2** | strongSwan (AES-256, SHA-256, modp2048) | Équivalent pédagogique |
 | **Kali Linux** | Image officielle `kalilinux/kali-rolling` | Identique |
 | **Uptime Kuma** | Image officielle `louislam/uptime-kuma` | Identique |
-| **VLANs (Phase 2)** | Réseaux Docker `bridge` séparés | Isolation L2/L3 équivalente |
+| **VLANs (Phase 2)** | Réseaux Docker `bridge` séparés | WAN / LAN / mgmt déjà déployés ; extensions Phase 2 non intégrées |
+
+## ✅ Statut validé aujourd'hui
+
+- Fonctionnel et vérifié : `fw-isp`, `fw-client`, `fw-server`, `client1`, `client2`, `kali`, `webserver`, `sshserver`, `uptime-kuma`
+- Vérifié : routage entre zones, NAT Internet, DNS/NTP, IPsec, HTTP via VPN, SSH vers `sshserver`, publication web via HAProxy, tests de connectivité
+- Non implémenté dans l'état actuel : `keepalived` / VRRP / CARP, `Wazuh`, `Suricata`, DMZ et VLAN additionnels décrits en Phase 2
+- Les documents `PHASE2.md` et `PHASE3.md` restent des **supports de roadmap / exercices**, pas une promesse que chaque étape est déjà fusionnée dans le dépôt
 
 ## 🗺️ Architecture déployée
 
@@ -69,7 +76,7 @@ docker compose version     # Compose v2.x
 
 ### Construction et lancement
 ```bash
-cd docker-cyber-lab/
+cd hania/
 
 # 1) Construire toutes les images (~10-15 min la 1ère fois)
 docker compose build
@@ -82,7 +89,12 @@ docker compose ps
 
 # 4) Lancer les tests de validation (Phase 1)
 chmod +x scripts/test-connectivity.sh
+
+# Linux / macOS
 ./scripts/test-connectivity.sh
+
+# Windows / PowerShell / Git Bash
+bash ./scripts/test-connectivity.sh
 ```
 
 ### Accès aux conteneurs
@@ -109,9 +121,9 @@ docker compose logs -f fw-client
 
 | Document | Description |
 |---|---|
-| [`docs/PHASE1.md`](docs/PHASE1.md) | Jours 1-15 — Consolidation & Documentation |
-| [`docs/PHASE2.md`](docs/PHASE2.md) | Jours 16-30 — Segmentation VLAN, ACLs, filtrage web, HA |
-| [`docs/PHASE3.md`](docs/PHASE3.md) | Jours 31-45 — Pentest complet & remédiation |
+| [`docs/PHASE1.md`](docs/PHASE1.md) | Jours 1-15 — Consolidation, audit et validation du socle actuel |
+| [`docs/PHASE2.md`](docs/PHASE2.md) | Jours 16-30 — Roadmap VLAN, ACLs avancées, filtrage web, HA |
+| [`docs/PHASE3.md`](docs/PHASE3.md) | Jours 31-45 — Guide de pentest et remédiation |
 | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Dépannage des problèmes courants |
 | [`docs/EQUIVALENCES.md`](docs/EQUIVALENCES.md) | Tableau de correspondance pfSense/FortiGate ↔ Docker |
 
@@ -138,10 +150,11 @@ docker compose down -v --rmi all
 
 | Point | Original | Docker | Impact |
 |---|---|---|---|
-| **HA pfSense (CARP)** | Possible | Limité (pas de VRRP natif facile en Docker) | Phase 2 J27 : démonstration via 2 conteneurs avec keepalived |
-| **HA FortiGate** | Cluster complet | Approche par 2 conteneurs + load balancer DNS | Phase 2 J28 |
-| **Inspection SSL/TLS profonde** | FortiGate native | Squid SslBump (plus complexe à configurer) | Phase 2 J24 : version simplifiée |
-| **Inspection paquet niveau ASIC** | FortiGate | Logiciel uniquement (Suricata) | Performance plus faible (peu impactant en lab) |
+| **HA pfSense (CARP)** | Possible | Non implémenté dans l'état actuel | Prévu seulement comme piste Phase 2 |
+| **HA FortiGate** | Cluster complet | Non implémenté dans l'état actuel | Prévu seulement comme piste Phase 2 |
+| **Inspection SSL/TLS profonde** | FortiGate native | Non implémenté dans l'état actuel | Squid SslBump resterait une évolution manuelle |
+| **Inspection paquet niveau ASIC** | FortiGate | Logiciel uniquement | Un IDS type Suricata reste à intégrer si besoin |
+| **SIEM / corrélation** | Plateforme dédiée | Non implémenté dans l'état actuel | `Wazuh` reste une cible Phase 4 |
 | **Interface graphique** | GUI native | CLI + Uptime Kuma | Pédagogique différent mais formateur |
 
 ---
