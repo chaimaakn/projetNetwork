@@ -40,6 +40,12 @@ echo "[$(date)] Démarrage de Squid (proxy/filtrage)..." | tee -a $LOG
 touch /etc/squid/blocked_domains.txt
 squid -N -f /etc/squid/squid.conf &
 
+# Suricata (IDS / contrôle applicatif) sur le segment LAN utilisateurs.
+echo "[$(date)] Validation et démarrage de Suricata (IDS)..." | tee -a $LOG
+mkdir -p /var/log/fw/suricata
+suricata -T -k none -i "$LAN_IF" -c /etc/suricata/suricata.yaml -S /etc/suricata/lab.rules >> "$LOG" 2>&1
+suricata -D -k none -i "$LAN_IF" -c /etc/suricata/suricata.yaml -S /etc/suricata/lab.rules -l /var/log/fw/suricata
+
 # IPsec (strongSwan)
 echo "[$(date)] Démarrage IPsec strongSwan..." | tee -a $LOG
 ipsec start --nofork &

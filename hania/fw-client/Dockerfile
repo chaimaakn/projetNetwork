@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     net-tools \
     ipset \
+    suricata \
     && rm -rf /var/lib/apt/lists/*
 
 COPY fw-client/ipsec.conf      /etc/ipsec.conf
@@ -31,12 +32,13 @@ COPY fw-client/ipsec.secrets   /etc/ipsec.secrets
 COPY fw-client/dnsmasq.conf    /etc/dnsmasq.conf
 COPY fw-client/squid.conf      /etc/squid/squid.conf
 COPY fw-client/blocked_domains.txt /etc/squid/blocked_domains.txt
+COPY fw-client/lab.rules       /etc/suricata/lab.rules
 COPY common/net-helpers.sh     /usr/local/lib/lab-net.sh
 COPY fw-client/rules.sh        /usr/local/bin/rules.sh
 COPY fw-client/entrypoint.sh   /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh /usr/local/bin/rules.sh \
- && sed -i 's/\r$//' /entrypoint.sh /usr/local/bin/rules.sh /usr/local/lib/lab-net.sh /etc/ipsec.conf /etc/ipsec.secrets /etc/dnsmasq.conf /etc/squid/squid.conf /etc/squid/blocked_domains.txt \
+ && sed -i 's/\r$//' /entrypoint.sh /usr/local/bin/rules.sh /usr/local/lib/lab-net.sh /etc/ipsec.conf /etc/ipsec.secrets /etc/dnsmasq.conf /etc/squid/squid.conf /etc/squid/blocked_domains.txt /etc/suricata/lab.rules \
  && mkdir -p /var/log/fw \
  && printf 'ha {\n    load = no\n}\n' > /etc/strongswan.d/charon/ha.conf \
  && chmod 600 /etc/ipsec.secrets

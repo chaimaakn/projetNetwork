@@ -6,7 +6,7 @@
 
 > 💡 **Note Docker** : les VLANs natifs (802.1Q) sont possibles avec Docker mais lourds. Nous reproduisons leur **comportement fonctionnel** avec des **réseaux Docker bridge séparés**, ce qui est pédagogiquement équivalent.
 
-> **Statut courant** : la segmentation coeur de Phase 2 et le hardening avance sont maintenant presents dans le depot avec `vlan_voip_net`, `vlan_guest_net`, `dmz_net`, les hotes `voip1`, `guest1`, `dmz-web`, `internet-probe`, les objets `ipset` de `fw-client`, la liste versionnee `fw-client/blocked_domains.txt`, les garde-fous egress de `fw-isp`, et les scripts `scripts/test-vlan-matrix.sh` et `scripts/test-policy-hardening.sh`. Les blocs HA, IDS/IPS et SIEM restent les prochaines grosses tranches.
+> **Statut courant** : la segmentation coeur de Phase 2, le hardening avance et la premiere brique IDS sont maintenant presents dans le depot avec `vlan_voip_net`, `vlan_guest_net`, `dmz_net`, les hotes `voip1`, `guest1`, `dmz-web`, `internet-probe`, les objets `ipset` de `fw-client`, la liste versionnee `fw-client/blocked_domains.txt`, `Suricata` sur `fw-client`, les garde-fous egress de `fw-isp`, et les scripts `scripts/test-vlan-matrix.sh`, `scripts/test-policy-hardening.sh` et `scripts/test-suricata.sh`. Les blocs HA et SIEM restent les prochaines grosses tranches.
 
 ## 🗓️ Semaine 4 — Segmentation VLAN (J16-J20)
 
@@ -328,6 +328,8 @@ iptables -t nat -A PREROUTING -i eth1 -p tcp --dport 80 -j REDIRECT --to-port 31
 
 ### Jour 24 — Application Control & DPI
 
+**Statut depot** : deja implemente en mode IDS sur `fw-client` avec `Suricata`, un jeu de regles versionne `fw-client/lab.rules`, des logs persistants sous `fw-client/logs/suricata/` et une validation automatisee via `scripts/test-suricata.sh`.
+
 Pour l'inspection L7, on peut ajouter **Suricata** au FW_CLIENT.
 
 Mettre à jour `fw-client/Dockerfile` :
@@ -509,5 +511,6 @@ Démos live à préparer :
 | ≥ 4 VLANs déployés | `docker network ls` |
 | Matrice de flux respectée | Script `test-vlan-matrix.sh` 100% OK |
 | ACLs avancees et filtrage web actif | Script `test-policy-hardening.sh` 100% OK |
+| IDS / controle applicatif de base | Script `test-suricata.sh` 100% OK |
 | Cluster HA fonctionnel | Extension non encore livree dans ce depot |
 | Logs centralisés | `/var/log/fw/*.log` exploitables |

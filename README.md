@@ -13,16 +13,15 @@ Le périmètre opérationnel dans `hania/` couvre :
 - firewalls Linux `iptables` avec ACLs objet via `ipset`
 - VPN site-à-site IPsec `strongSwan`
 - DNS et NTP centralisés sur `fw-isp`
-- DHCP côté client, proxy Squid, publication HTTP via HAProxy
+- DHCP côté client, proxy Squid, IDS Suricata et publication HTTP via HAProxy
 - durcissement avancé Phase 2 : liste de domaines Squid versionnée et garde-fous egress sur `fw-isp`
 - monitoring léger avec Uptime Kuma
-- poste d'attaque Kali et scripts de validation (`test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-full-lab.sh`)
+- poste d'attaque Kali et scripts de validation (`test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh`, `test-full-lab.sh`)
 
 Extensions possibles à partir de ce socle :
 
 - haute disponibilité `keepalived` / `conntrackd`
 - SOC / SIEM `Wazuh`
-- IDS / contrôle applicatif `Suricata`
 - scénarios avancés de Phase 2/4 décrits dans les documents de roadmap
 
 ## Démarrage rapide
@@ -43,6 +42,9 @@ bash ./scripts/test-vlan-matrix.sh
 # Validation du hardening avance
 bash ./scripts/test-policy-hardening.sh
 
+# Validation IDS / Suricata
+bash ./scripts/test-suricata.sh
+
 # Validation complete
 bash ./scripts/test-full-lab.sh
 ```
@@ -53,6 +55,7 @@ bash ./scripts/test-full-lab.sh
 docker compose ps
 bash ./scripts/test-vlan-matrix.sh
 bash ./scripts/test-policy-hardening.sh
+bash ./scripts/test-suricata.sh
 bash ./scripts/test-full-lab.sh
 docker exec fw-client ipsec statusall
 docker exec client1 curl -s http://192.168.20.10

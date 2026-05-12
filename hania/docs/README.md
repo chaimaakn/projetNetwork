@@ -4,7 +4,7 @@
 
 ## 🎯 Objectif de cette adaptation
 
-Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, le monitoring, le hardening avance de Phase 2 et la base des démonstrations de pentest.
+Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, Suricata en IDS, le monitoring, le hardening avance de Phase 2 et la base des démonstrations de pentest.
 
 | Composant original | Remplacement Docker | Fonction |
 |---|---|---|
@@ -23,9 +23,10 @@ Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + 
 - Les scripts actifs résolvent les interfaces dynamiquement a partir des IPs statiques du compose ; l'ordre `ethX` n'est plus une hypothèse de fonctionnement
 - La segmentation Phase 2 coeur est integree : VLAN VOIP, VLAN GUEST, DMZ et matrice de flux testee
 - Le hardening avance Phase 2 est livre : objets et groupes `ipset` sur `fw-client`, liste `blocked_domains.txt` versionnee pour Squid, garde-fous egress sur `fw-isp`
-- Le jeu de validation couvre maintenant `test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh` et `test-full-lab.sh`
+- La brique IDS Phase 2 est livree : `Suricata` tourne sur `fw-client`, journalise dans `fw-client/logs/suricata/` et valide des alertes de laboratoire versionnees
+- Le jeu de validation couvre maintenant `test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh` et `test-full-lab.sh`
 - Les documents `PHASE2.md` et `PHASE3.md` servent maintenant de support pour les extensions suivantes et la campagne de validation offensive
-- Evolutions possibles : `keepalived` / VRRP / CARP, `Wazuh`, `Suricata` et les blocs HA / IDS / SIEM restants de la roadmap
+- Evolutions possibles : `keepalived` / VRRP / CARP, `Wazuh` et les blocs HA / SIEM restants de la roadmap
 
 ## 🗺️ Architecture déployée
 
@@ -95,6 +96,7 @@ docker compose ps
 chmod +x scripts/test-connectivity.sh
 chmod +x scripts/test-vlan-matrix.sh
 chmod +x scripts/test-policy-hardening.sh
+chmod +x scripts/test-suricata.sh
 chmod +x scripts/test-full-lab.sh
 
 # Smoke test
@@ -105,6 +107,9 @@ bash ./scripts/test-vlan-matrix.sh
 
 # Validation du hardening avance
 bash ./scripts/test-policy-hardening.sh
+
+# Validation IDS / Suricata
+bash ./scripts/test-suricata.sh
 
 # Validation complete
 bash ./scripts/test-full-lab.sh

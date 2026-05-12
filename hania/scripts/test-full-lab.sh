@@ -94,6 +94,14 @@ else
 fi
 
 echo ""
+echo "--- IDS / Suricata ---"
+if bash ./scripts/test-suricata.sh; then
+	ok "Suricata IDS"
+else
+	fail "Suricata IDS"
+fi
+
+echo ""
 echo "--- Etat des services Docker ---"
 for service_name in fw-isp fw-client fw-server client1 client2 voip1 guest1 webserver sshserver dmz-web kali internet-probe uptime-kuma; do
 	check_running_service "$service_name"
@@ -103,6 +111,7 @@ echo ""
 echo "--- Daemons principaux ---"
 check_container_shell "fw-client: dnsmasq actif" "fw-client" "pgrep -f 'dnsmasq'"
 check_container_shell "fw-client: squid actif" "fw-client" "pgrep -f 'squid'"
+check_container_shell "fw-client: suricata actif" "fw-client" "pgrep -f 'suricata'"
 check_container_shell "fw-client: strongSwan actif" "fw-client" "pgrep -f 'charon|starter'"
 check_container_shell "fw-server: chronyd actif" "fw-server" "pgrep -f 'chronyd'"
 check_container_shell "fw-server: strongSwan actif" "fw-server" "pgrep -f 'charon|starter'"
