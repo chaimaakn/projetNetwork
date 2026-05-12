@@ -78,8 +78,16 @@ else
 fi
 
 echo ""
+echo "--- Matrice de flux Phase 2 ---"
+if bash ./scripts/test-vlan-matrix.sh; then
+	ok "Matrice de flux Phase 2"
+else
+	fail "Matrice de flux Phase 2"
+fi
+
+echo ""
 echo "--- Etat des services Docker ---"
-for service_name in fw-isp fw-client fw-server client1 client2 webserver sshserver kali uptime-kuma; do
+for service_name in fw-isp fw-client fw-server client1 client2 voip1 guest1 webserver sshserver dmz-web kali internet-probe uptime-kuma; do
 	check_running_service "$service_name"
 done
 
@@ -105,6 +113,8 @@ echo ""
 echo "--- Chemins applicatifs ---"
 check_container_shell "HTTP interne via VPN" "client1" "curl -fsS http://192.168.20.10 | grep -q 'LabCyber Web Server'"
 check_container_shell "SSH joignable via VPN" "client1" "nc -z 192.168.20.11 22"
+check_container_shell "HTTP DMZ via VPN" "client1" "curl -fsS http://192.168.50.10 | grep -q 'LabCyber Web Server'"
+check_container_shell "Internet simule -> DMZ HTTP" "internet-probe" "curl -fsS http://192.168.50.10 | grep -q 'LabCyber Web Server'"
 check_container_shell "Frontend public HAProxy" "fw-isp" "curl -fsS http://200.0.0.10 | grep -q 'LabCyber Web Server'"
 check_container_shell "Proxy Squid utilisable depuis client1" "client1" "curl -fsSI -x http://192.168.10.1:3128 http://example.com >/dev/null"
 check_command "Uptime Kuma accessible depuis l'hote" curl -fsSI http://127.0.0.1:3001

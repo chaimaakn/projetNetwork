@@ -14,15 +14,16 @@ Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + 
 | **VPN IPsec IKEv2** | strongSwan (AES-256, SHA-256, modp2048) | Équivalent pédagogique |
 | **Kali Linux** | Image officielle `kalilinux/kali-rolling` | Identique |
 | **Uptime Kuma** | Image officielle `louislam/uptime-kuma` | Identique |
-| **VLANs (Phase 2)** | Réseaux Docker `bridge` séparés | WAN / LAN / mgmt déjà déployés ; extensions Phase 2 non intégrées |
+| **VLANs (Phase 2)** | Réseaux Docker `bridge` séparés | `lan_client`, `vlan_voip`, `vlan_guest`, `lan_server`, `dmz`, `mgmt` déployés |
 
 ## ✅ Statut validé aujourd'hui
 
-- Fonctionnel et vérifié : `fw-isp`, `fw-client`, `fw-server`, `client1`, `client2`, `kali`, `webserver`, `sshserver`, `uptime-kuma`
-- Vérifié : routage entre zones, NAT Internet, DNS/NTP, IPsec, HTTP via VPN, SSH vers `sshserver`, publication web via HAProxy, proxy Squid, monitoring et tests automatisés
+- Fonctionnel et vérifié : `fw-isp`, `fw-client`, `fw-server`, `client1`, `client2`, `voip1`, `guest1`, `kali`, `webserver`, `sshserver`, `dmz-web`, `internet-probe`, `uptime-kuma`
+- Vérifié : routage entre zones, NAT Internet, DNS/NTP, IPsec, HTTP via VPN, SSH vers `sshserver`, HTTP DMZ, publication web via HAProxy, proxy Squid, monitoring et tests automatisés
 - Les scripts actifs résolvent les interfaces dynamiquement a partir des IPs statiques du compose ; l'ordre `ethX` n'est plus une hypothèse de fonctionnement
-- Les documents `PHASE2.md` et `PHASE3.md` servent de supports d'extension et de campagne autour de ce socle validé
-- Evolutions possibles : `keepalived` / VRRP / CARP, `Wazuh`, `Suricata`, DMZ et VLAN additionnels de Phase 2
+- La segmentation Phase 2 coeur est integree : VLAN VOIP, VLAN GUEST, DMZ et matrice de flux testee
+- Les documents `PHASE2.md` et `PHASE3.md` servent maintenant de support pour les extensions suivantes et la campagne de validation offensive
+- Evolutions possibles : `keepalived` / VRRP / CARP, `Wazuh`, `Suricata` et le durcissement avance restant de Phase 2
 
 ## 🗺️ Architecture déployée
 
@@ -90,10 +91,14 @@ docker compose ps
 
 # 4) Lancer les tests de validation
 chmod +x scripts/test-connectivity.sh
+chmod +x scripts/test-vlan-matrix.sh
 chmod +x scripts/test-full-lab.sh
 
 # Smoke test
 bash ./scripts/test-connectivity.sh
+
+# Validation Phase 2
+bash ./scripts/test-vlan-matrix.sh
 
 # Validation complete
 bash ./scripts/test-full-lab.sh
@@ -108,7 +113,11 @@ docker exec -it fw-server bash
 
 # Shell sur les postes
 docker exec -it client1   bash
+docker exec -it guest1    bash
+docker exec -it voip1     bash
 docker exec -it webserver bash
+docker exec -it dmz-web   bash
+docker exec -it internet-probe bash
 docker exec -it kali      bash    # Pour la phase 3
 
 # Logs en direct
@@ -152,11 +161,11 @@ docker compose down -v --rmi all
 
 | Point | Original | Docker | Impact |
 |---|---|---|---|
-| **HA pfSense (CARP)** | Possible | Extension optionnelle | Peut etre ajoutee proprement en Phase 2 |
-| **HA FortiGate** | Cluster complet | Extension optionnelle | Peut etre ajoutee proprement en Phase 2 |
+| **HA pfSense (CARP)** | Possible | Extension optionnelle | Reste la grande brique Phase 2 non livree |
+| **HA FortiGate** | Cluster complet | Extension optionnelle | Reste la grande brique Phase 2 non livree |
 | **Inspection SSL/TLS profonde** | FortiGate native | Extension optionnelle | Squid SslBump demanderait une integration dediee |
 | **Inspection paquet niveau ASIC** | FortiGate | Logiciel uniquement | Un IDS type Suricata peut enrichir le socle |
-| **SIEM / corrélation** | Plateforme dédiée | Extension optionnelle | `Wazuh` reste une cible naturelle de Phase 4 |
+| **SIEM / corrélation** | Plateforme dédiée | Extension optionnelle | `Wazuh` reste la grande brique naturelle de Phase 4 |
 | **Interface graphique** | GUI native | CLI + Uptime Kuma | Pédagogique différent mais formateur |
 
 ---

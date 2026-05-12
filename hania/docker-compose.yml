@@ -58,6 +58,10 @@ services:
         ipv4_address: 10.10.0.2    # WAN side
       lan_client_net:
         ipv4_address: 192.168.10.1 # LAN CLIENT gateway
+      vlan_voip_net:
+        ipv4_address: 192.168.30.1 # VLAN VOIP gateway
+      vlan_guest_net:
+        ipv4_address: 192.168.40.1 # VLAN GUEST gateway
       mgmt_net:
         ipv4_address: 192.168.99.10
     depends_on:
@@ -88,6 +92,8 @@ services:
         ipv4_address: 10.20.0.2    # WAN side
       lan_server_net:
         ipv4_address: 192.168.20.1 # LAN SERVER gateway
+      dmz_net:
+        ipv4_address: 192.168.50.1 # DMZ gateway
       mgmt_net:
         ipv4_address: 192.168.99.20
     depends_on:
@@ -129,6 +135,46 @@ services:
     restart: unless-stopped
 
   # =========================================================================
+  # VOIP 1 : Hote du VLAN_VOIP pour valider l'isolation et les flux autorises
+  # =========================================================================
+  voip1:
+    build: ./client
+    container_name: voip1
+    hostname: voip1
+    cap_add:
+      - NET_ADMIN
+    environment:
+      GATEWAY_IP: 192.168.30.1
+      DNS_SERVER: 10.10.0.1
+      SEARCH_DOMAIN: labcyber.local
+    networks:
+      vlan_voip_net:
+        ipv4_address: 192.168.30.10
+    depends_on:
+      - fw-client
+    restart: unless-stopped
+
+  # =========================================================================
+  # GUEST 1 : Hote du VLAN_GUEST pour valider l'isolation Internet-only
+  # =========================================================================
+  guest1:
+    build: ./client
+    container_name: guest1
+    hostname: guest1
+    cap_add:
+      - NET_ADMIN
+    environment:
+      GATEWAY_IP: 192.168.40.1
+      DNS_SERVER: 10.10.0.1
+      SEARCH_DOMAIN: labcyber.local
+    networks:
+      vlan_guest_net:
+        ipv4_address: 192.168.40.10
+    depends_on:
+      - fw-client
+    restart: unless-stopped
+
+  # =========================================================================
   # SERVER WEB : Serveur HTTP/HTTPS dans le LAN_SERVER
   # =========================================================================
   webserver:
@@ -161,6 +207,26 @@ services:
     restart: unless-stopped
 
   # =========================================================================
+  # DMZ WEB : Serveur HTTP expose dans la DMZ pour valider Phase 2
+  # =========================================================================
+  dmz-web:
+    build: ./server
+    container_name: dmz-web
+    hostname: dmz-web
+    cap_add:
+      - NET_ADMIN
+    environment:
+      GATEWAY_IP: 192.168.50.1
+      DNS_SERVER: 10.20.0.1
+      SEARCH_DOMAIN: labcyber.local
+    networks:
+      dmz_net:
+        ipv4_address: 192.168.50.10
+    depends_on:
+      - fw-server
+    restart: unless-stopped
+
+  # =========================================================================
   # KALI : Machine d'attaque pour la phase 3 (pentest)
   # Connectée au LAN_CLIENT pour simuler un attaquant interne
   # =========================================================================
@@ -178,6 +244,26 @@ services:
       - fw-client
     stdin_open: true
     tty: true
+    restart: unless-stopped
+
+  # =========================================================================
+  # INTERNET PROBE : Simule une machine externe sur Internet simulé
+  # =========================================================================
+  internet-probe:
+    build: ./client
+    container_name: internet-probe
+    hostname: internet-probe
+    cap_add:
+      - NET_ADMIN
+    environment:
+      GATEWAY_IP: 200.0.0.10
+      DNS_SERVER: ""
+      SEARCH_DOMAIN: ""
+    networks:
+      internet_net:
+        ipv4_address: 200.0.0.50
+    depends_on:
+      - fw-isp
     restart: unless-stopped
 
   # =========================================================================
@@ -239,6 +325,30 @@ networks:
       config:
         - subnet: 192.168.20.0/24
           gateway: 192.168.20.254
+
+  # VLAN VOIP derrière FW_CLIENT
+  vlan_voip_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.30.0/24
+          gateway: 192.168.30.254
+
+  # VLAN GUEST derrière FW_CLIENT
+  vlan_guest_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.40.0/24
+          gateway: 192.168.40.254
+
+  # DMZ derrière FW_SERVER
+  dmz_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.50.0/24
+          gateway: 192.168.50.254
 
   # Réseau de management (Out-Of-Band) - phase 2
   mgmt_net:

@@ -38,6 +38,26 @@ ping_check() {
     fi
 }
 
+wait_for_vpn() {
+    local max_attempts=${1:-15}
+    local delay_seconds=${2:-2}
+    local attempt=1
+
+    info "Attente de l'etablissement du tunnel IPsec"
+    while [ "$attempt" -le "$max_attempts" ]; do
+        if docker exec fw-client bash -lc "ipsec statusall | grep -Eq 'ESTABLISHED|INSTALLED'" >/dev/null 2>&1; then
+            ok "Tunnel IPsec operationnel"
+            return 0
+        fi
+
+        sleep "$delay_seconds"
+        attempt=$((attempt + 1))
+    done
+
+    fail "Tunnel IPsec indisponible"
+    return 1
+}
+
 echo "=========================================="
 echo "  Tests de connectivite - LabCyber Docker  "
 echo "=========================================="
@@ -54,8 +74,21 @@ ping_check webserver 192.168.20.1  "webserver -> FW_SERVER (gateway)"
 
 echo ""
 echo "--- Tests cross-LAN via VPN IPsec ---"
-ping_check client1   192.168.20.10 "client1 -> webserver (via VPN)"
-ping_check client1   192.168.20.11 "client1 -> sshserver (via VPN)"
+if wait_for_vpn; then
+    info "HTTP depuis client1 vers webserver (via VPN)"
+    if docker exec client1 curl -fsS http://192.168.20.10 >/dev/null 2>&1; then
+        ok "client1 -> webserver HTTP (via VPN)"
+    else
+        fail "client1 -> webserver HTTP (via VPN)"
+    fi
+
+    info "SSH depuis client1 vers sshserver (via VPN)"
+    if docker exec client1 nc -zw 3 192.168.20.11 22 >/dev/null 2>&1; then
+        ok "client1 -> sshserver SSH (via VPN)"
+    else
+        fail "client1 -> sshserver SSH (via VPN)"
+    fi
+fi
 
 echo ""
 echo "--- Tests Internet (NAT) ---"

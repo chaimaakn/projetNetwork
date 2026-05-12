@@ -13,9 +13,11 @@ echo "[$(date)] === Démarrage FW_SERVER ===" | tee -a $LOG
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
 require_if_by_ip LAN_IF 192.168.20.1
+require_if_by_ip DMZ_IF 192.168.50.1
 require_if_by_ip WAN_IF 10.20.0.2
 require_if_by_ip MGMT_IF 192.168.99.20
 log_if_assignment LAN "$LAN_IF" 192.168.20.1 | tee -a "$LOG"
+log_if_assignment DMZ "$DMZ_IF" 192.168.50.1 | tee -a "$LOG"
 log_if_assignment WAN "$WAN_IF" 10.20.0.2 | tee -a "$LOG"
 log_if_assignment MGMT "$MGMT_IF" 192.168.99.20 | tee -a "$LOG"
 

@@ -25,7 +25,10 @@ log_if_assignment MGMT "$MGMT_IF" 192.168.99.1 | tee -a "$LOG"
 
 # Routes statiques vers les LANs derrière les firewalls sites.
 replace_static_route 192.168.10.0/24 10.10.0.2
+replace_static_route 192.168.30.0/24 10.10.0.2
+replace_static_route 192.168.40.0/24 10.10.0.2
 replace_static_route 192.168.20.0/24 10.20.0.2
+replace_static_route 192.168.50.0/24 10.20.0.2
 
 # Applique les règles iptables
 /usr/local/bin/rules.sh | tee -a $LOG

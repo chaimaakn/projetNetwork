@@ -47,8 +47,14 @@ iptables -A INPUT -p udp --dport 53 -s 10.20.0.0/24 -j ACCEPT
 iptables -A INPUT -p tcp --dport 53 -s 10.20.0.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 53 -s 192.168.10.0/24 -j ACCEPT
 iptables -A INPUT -p tcp --dport 53 -s 192.168.10.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 53 -s 192.168.30.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 53 -s 192.168.30.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 53 -s 192.168.40.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 53 -s 192.168.40.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 53 -s 192.168.20.0/24 -j ACCEPT
 iptables -A INPUT -p tcp --dport 53 -s 192.168.20.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 53 -s 192.168.50.0/24 -j ACCEPT
+iptables -A INPUT -p tcp --dport 53 -s 192.168.50.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 53 -s 192.168.99.0/24 -j ACCEPT
 iptables -A INPUT -p tcp --dport 53 -s 192.168.99.0/24 -j ACCEPT
 
@@ -56,7 +62,10 @@ iptables -A INPUT -p tcp --dport 53 -s 192.168.99.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 123 -s 10.10.0.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 123 -s 10.20.0.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 123 -s 192.168.10.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 123 -s 192.168.30.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 123 -s 192.168.40.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 123 -s 192.168.20.0/24 -j ACCEPT
+iptables -A INPUT -p udp --dport 123 -s 192.168.50.0/24 -j ACCEPT
 iptables -A INPUT -p udp --dport 123 -s 192.168.99.0/24 -j ACCEPT
 
 # --- Management : SSH/HTTPS uniquement depuis le réseau de management ---
@@ -65,8 +74,17 @@ iptables -A INPUT -p tcp --dport 443 -s 192.168.99.0/24 -j ACCEPT
 
 # --- Forwarding LAN_CLIENT -> Internet ---
 iptables -A FORWARD -s 192.168.10.0/24 -o "$INTERNET_IF" -j ACCEPT
+# --- Forwarding VLAN VOIP -> Internet ---
+iptables -A FORWARD -s 192.168.30.0/24 -o "$INTERNET_IF" -j ACCEPT
+# --- Forwarding VLAN GUEST -> Internet ---
+iptables -A FORWARD -s 192.168.40.0/24 -o "$INTERNET_IF" -j ACCEPT
 # --- Forwarding LAN_SERVER -> Internet ---
 iptables -A FORWARD -s 192.168.20.0/24 -o "$INTERNET_IF" -j ACCEPT
+# --- Forwarding DMZ -> Internet ---
+iptables -A FORWARD -s 192.168.50.0/24 -o "$INTERNET_IF" -j ACCEPT
+
+# --- Internet simulé -> DMZ : HTTP/HTTPS uniquement ---
+iptables -A FORWARD -s 200.0.0.0/24 -d 192.168.50.0/24 -p tcp -m multiport --dports 80,443 -j ACCEPT
 
 # --- Egress minimal des firewalls de site vers Internet ---
 # Nécessaire pour les services locaux comme Squid, curl/apt et les synchronisations.
@@ -84,7 +102,10 @@ iptables -A FORWARD -p esp -j ACCEPT
 # --- NAT (équivalent Outbound NAT pfSense, mode automatique) ---
 # Tout le trafic sortant depuis les LANs est SNATé vers l'IP "Internet"
 iptables -t nat -A POSTROUTING -s 192.168.10.0/24 -o "$INTERNET_IF" -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.30.0/24 -o "$INTERNET_IF" -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.40.0/24 -o "$INTERNET_IF" -j MASQUERADE
 iptables -t nat -A POSTROUTING -s 192.168.20.0/24 -o "$INTERNET_IF" -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.50.0/24 -o "$INTERNET_IF" -j MASQUERADE
 iptables -t nat -A POSTROUTING -s 10.10.0.0/24    -o "$INTERNET_IF" -j MASQUERADE
 iptables -t nat -A POSTROUTING -s 10.20.0.0/24    -o "$INTERNET_IF" -j MASQUERADE
 

@@ -13,7 +13,11 @@ echo "[$(date)] === Démarrage FW_CLIENT ===" | tee -a $LOG
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
 require_if_by_ip LAN_IF 192.168.10.1
+require_if_by_ip VOIP_IF 192.168.30.1
+require_if_by_ip GUEST_IF 192.168.40.1
 log_if_assignment LAN "$LAN_IF" 192.168.10.1 | tee -a "$LOG"
+log_if_assignment VOIP "$VOIP_IF" 192.168.30.1 | tee -a "$LOG"
+log_if_assignment GUEST "$GUEST_IF" 192.168.40.1 | tee -a "$LOG"
 
 # Route par défaut via FW_ISP
 replace_default_route 10.10.0.1

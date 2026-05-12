@@ -1,9 +1,20 @@
 #!/bin/bash
-ip route del default 2>/dev/null || true
-ip route add default via 192.168.20.1 || true
 
-echo "nameserver 192.168.99.1" > /etc/resolv.conf
-echo "search labcyber.local" >> /etc/resolv.conf
+set -e
+
+GATEWAY_IP=${GATEWAY_IP:-192.168.20.1}
+DNS_SERVER=${DNS_SERVER:-192.168.99.1}
+SEARCH_DOMAIN=${SEARCH_DOMAIN:-labcyber.local}
+
+ip route del default 2>/dev/null || true
+ip route add default via "$GATEWAY_IP" || true
+
+if [ -n "$DNS_SERVER" ]; then
+	echo "nameserver ${DNS_SERVER}" > /etc/resolv.conf
+	if [ -n "$SEARCH_DOMAIN" ]; then
+		echo "search ${SEARCH_DOMAIN}" >> /etc/resolv.conf
+	fi
+fi
 
 # Démarrer SSH
 service ssh start

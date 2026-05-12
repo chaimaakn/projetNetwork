@@ -9,20 +9,20 @@ Ce dépôt contient aujourd'hui deux pistes techniques distinctes :
 
 Le périmètre opérationnel dans `hania/` couvre :
 
-- segmentation WAN / LAN / management via réseaux Docker `bridge`
+- segmentation WAN / LAN / management et Phase 2 coeur (`vlan_voip_net`, `vlan_guest_net`, `dmz_net`) via réseaux Docker `bridge`
 - firewalls Linux `iptables`
 - VPN site-à-site IPsec `strongSwan`
 - DNS et NTP centralisés sur `fw-isp`
 - DHCP côté client, proxy Squid, publication HTTP via HAProxy
 - monitoring léger avec Uptime Kuma
-- poste d'attaque Kali et scripts de validation
+- poste d'attaque Kali et scripts de validation (`test-connectivity.sh`, `test-vlan-matrix.sh`, `test-full-lab.sh`)
 
 Extensions possibles à partir de ce socle :
 
 - haute disponibilité `keepalived` / `conntrackd`
 - SOC / SIEM `Wazuh`
 - IDS / contrôle applicatif `Suricata`
-- VLAN, DMZ et scénarios avancés décrits dans les documents de roadmap
+- scénarios avancés de Phase 2/4 décrits dans les documents de roadmap
 
 ## Démarrage rapide
 
@@ -36,6 +36,9 @@ docker compose ps
 # Smoke test
 bash ./scripts/test-connectivity.sh
 
+# Validation Phase 2
+bash ./scripts/test-vlan-matrix.sh
+
 # Validation complete
 bash ./scripts/test-full-lab.sh
 ```
@@ -44,9 +47,11 @@ bash ./scripts/test-full-lab.sh
 
 ```bash
 docker compose ps
+bash ./scripts/test-vlan-matrix.sh
 bash ./scripts/test-full-lab.sh
 docker exec fw-client ipsec statusall
 docker exec client1 curl -s http://192.168.20.10
+docker exec client1 curl -s http://192.168.50.10
 docker exec client1 nc -zv 192.168.20.11 22
 ```
 

@@ -12,9 +12,13 @@ set -e
 echo "[FW_CLIENT] Application des règles iptables..."
 
 require_if_by_ip LAN_IF 192.168.10.1
+require_if_by_ip VOIP_IF 192.168.30.1
+require_if_by_ip GUEST_IF 192.168.40.1
 require_if_by_ip MGMT_IF 192.168.99.10
 require_if_by_ip WAN_IF 10.10.0.2
 log_if_assignment LAN "$LAN_IF" 192.168.10.1
+log_if_assignment VOIP "$VOIP_IF" 192.168.30.1
+log_if_assignment GUEST "$GUEST_IF" 192.168.40.1
 log_if_assignment MGMT "$MGMT_IF" 192.168.99.10
 log_if_assignment WAN "$WAN_IF" 10.10.0.2
 
@@ -51,23 +55,55 @@ iptables -A INPUT -p udp --dport 500  -j ACCEPT
 iptables -A INPUT -p udp --dport 4500 -j ACCEPT
 iptables -A INPUT -p esp -j ACCEPT
 
-# --- Forwarding LAN_CLIENT -> Internet (via FW_ISP) ---
-iptables -A FORWARD -i "$LAN_IF" -o "$WAN_IF" -s 192.168.10.0/24 -j ACCEPT
+# Anti-spoofing des segments locaux
+iptables -A FORWARD -i "$LAN_IF" ! -s 192.168.10.0/24 -j DROP
+iptables -A FORWARD -i "$VOIP_IF" ! -s 192.168.30.0/24 -j DROP
+iptables -A FORWARD -i "$GUEST_IF" ! -s 192.168.40.0/24 -j DROP
+
+# USERS -> SERVERS via VPN : HTTP/HTTPS/SSH uniquement
+iptables -A FORWARD -s 192.168.10.0/24 -d 192.168.20.0/24 -p tcp -m multiport --dports 22,80,443 -j ACCEPT
+iptables -A FORWARD -s 192.168.10.0/24 -d 192.168.20.0/24 -j DROP
+
+# USERS -> DMZ via VPN : HTTP/HTTPS uniquement
+iptables -A FORWARD -s 192.168.10.0/24 -d 192.168.50.0/24 -p tcp -m multiport --dports 80,443 -j ACCEPT
+iptables -A FORWARD -s 192.168.10.0/24 -d 192.168.50.0/24 -j DROP
+
+# USERS -> autres VLANs locaux : interdits
+iptables -A FORWARD -s 192.168.10.0/24 -d 192.168.30.0/24 -j DROP
+iptables -A FORWARD -s 192.168.10.0/24 -d 192.168.40.0/24 -j DROP
+
+# VOIP : DNS + SIP + RTP vers l'exterieur uniquement
+iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -d 10.10.0.1 -p udp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -d 10.10.0.1 -p tcp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -p udp --dport 5060 -j ACCEPT
+iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -p udp --dport 10000:20000 -j ACCEPT
+iptables -A FORWARD -i "$VOIP_IF" -s 192.168.30.0/24 -d 192.168.0.0/16 -j DROP
+
+# GUEST : Internet HTTP/HTTPS + DNS uniquement, jamais l'interne
+iptables -A FORWARD -i "$GUEST_IF" -s 192.168.40.0/24 -d 192.168.0.0/16 -j DROP
+iptables -A FORWARD -i "$GUEST_IF" -o "$WAN_IF" -s 192.168.40.0/24 -d 10.10.0.1 -p udp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$GUEST_IF" -o "$WAN_IF" -s 192.168.40.0/24 -d 10.10.0.1 -p tcp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$GUEST_IF" -o "$WAN_IF" -s 192.168.40.0/24 -p tcp -m multiport --dports 80,443 -j ACCEPT
 
 # --- DNS/NTP du LAN vers FW_ISP via le réseau de management ---
 iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d 192.168.99.1 -p udp --dport 53 -j ACCEPT
 iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d 192.168.99.1 -p tcp --dport 53 -j ACCEPT
 iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d 192.168.99.1 -p udp --dport 123 -j ACCEPT
 
-# --- Forwarding LAN_CLIENT -> LAN_SERVER (via tunnel VPN) ---
-# strongSwan utilise XFRM, le trafic passera donc par les politiques IPsec
-iptables -A FORWARD -s 192.168.10.0/24 -d 192.168.20.0/24 -j ACCEPT
+# Sortie Internet generale pour USERS
+iptables -A FORWARD -i "$LAN_IF" -o "$WAN_IF" -s 192.168.10.0/24 -j ACCEPT
+
+# Flux retour VPN/DMZ autorises
 iptables -A FORWARD -s 192.168.20.0/24 -d 192.168.10.0/24 -j ACCEPT
+iptables -A FORWARD -s 192.168.50.0/24 -d 192.168.10.0/24 -j ACCEPT
 
 # --- NAT pour Internet uniquement (PAS pour le tunnel VPN) ---
-# Important : on exclut 192.168.20.0/24 (LAN distant) du NAT
+# Important : on exclut les sous-reseaux distants atteints via IPsec du NAT
 iptables -t nat -A POSTROUTING -s 192.168.10.0/24 -d 192.168.20.0/24 -j ACCEPT
+iptables -t nat -A POSTROUTING -s 192.168.10.0/24 -d 192.168.50.0/24 -j ACCEPT
 iptables -t nat -A POSTROUTING -s 192.168.10.0/24 -o "$WAN_IF" -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.30.0/24 -o "$WAN_IF" -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.40.0/24 -o "$WAN_IF" -j MASQUERADE
 
 # Logs
 iptables -A INPUT   -m limit --limit 5/min -j LOG --log-prefix "[FW_CLIENT-IN-DROP] "

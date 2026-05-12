@@ -6,6 +6,8 @@
 
 > 💡 **Note Docker** : les VLANs natifs (802.1Q) sont possibles avec Docker mais lourds. Nous reproduisons leur **comportement fonctionnel** avec des **réseaux Docker bridge séparés**, ce qui est pédagogiquement équivalent.
 
+> **Statut courant** : la segmentation coeur de Phase 2 est maintenant presente dans le depot avec `vlan_voip_net`, `vlan_guest_net`, `dmz_net`, les hotes `voip1`, `guest1`, `dmz-web`, `internet-probe`, et le script de validation `scripts/test-vlan-matrix.sh`. Les blocs HA, IDS/IPS et SIEM restent les prochaines grosses tranches.
+
 ## 🗓️ Semaine 4 — Segmentation VLAN (J16-J20)
 
 ### Jour 16 — Conception du plan VLAN
@@ -15,10 +17,10 @@
 | ID | Nom VLAN | Rôle | Subnet | Réseau Docker |
 |---|---|---|---|---|
 | 10 | VLAN_USERS | Postes utilisateurs | 192.168.10.0/24 | `lan_client_net` (existant) |
-| 20 | VLAN_VOIP | Téléphonie | 192.168.30.0/24 | `vlan_voip_net` (à créer) |
-| 30 | VLAN_GUEST | Invités/WiFi guest | 192.168.40.0/24 | `vlan_guest_net` (à créer) |
+| 20 | VLAN_VOIP | Téléphonie | 192.168.30.0/24 | `vlan_voip_net` (déployé) |
+| 30 | VLAN_GUEST | Invités/WiFi guest | 192.168.40.0/24 | `vlan_guest_net` (déployé) |
 | 100 | VLAN_SERVERS | Serveurs internes | 192.168.20.0/24 | `lan_server_net` (existant) |
-| 110 | VLAN_DMZ | Serveurs exposés | 192.168.50.0/24 | `dmz_net` (à créer) |
+| 110 | VLAN_DMZ | Serveurs exposés | 192.168.50.0/24 | `dmz_net` (déployé) |
 | 999 | VLAN_MGMT | Management OOB | 192.168.99.0/24 | `mgmt_net` (existant) |
 
 #### Matrice de flux (à valider par l'enseignant)
@@ -37,33 +39,33 @@
 
 ### Jour 17 — Déploiement VLANs côté CLIENT
 
-**Étape 1** — Mettre à jour `docker-compose.yml` pour ajouter les nouveaux réseaux :
+**Étape 1** — Vérifier les réseaux déjà ajoutés dans `docker-compose.yml` :
 
 ```yaml
 # Ajouter dans la section networks: à la fin du docker-compose.yml
   vlan_voip_net:
     driver: bridge
-    internal: true
     ipam:
       config:
         - subnet: 192.168.30.0/24
+          gateway: 192.168.30.254
 
   vlan_guest_net:
     driver: bridge
-    internal: true
     ipam:
       config:
         - subnet: 192.168.40.0/24
+          gateway: 192.168.40.254
 
   dmz_net:
     driver: bridge
-    internal: true
     ipam:
       config:
         - subnet: 192.168.50.0/24
+          gateway: 192.168.50.254
 ```
 
-**Étape 2** — Connecter FW_CLIENT aux nouveaux VLANs :
+**Étape 2** — Vérifier le raccordement des firewalls et hotes de test :
 
 ```yaml
 # Dans la section fw-client > networks: ajouter
@@ -71,6 +73,16 @@
         ipv4_address: 192.168.30.1
       vlan_guest_net:
         ipv4_address: 192.168.40.1
+
+# Dans la section fw-server > networks: ajouter
+      dmz_net:
+        ipv4_address: 192.168.50.1
+
+# Hotes de validation
+voip1:        192.168.30.10
+guest1:       192.168.40.10
+dmz-web:      192.168.50.10
+internet-probe: 200.0.0.50
 ```
 
 **Étape 3** — Mettre à jour `fw-client/rules.sh` avec les ACLs inter-VLAN :
@@ -114,17 +126,16 @@ docker compose up -d --build
 **Étape 5** — Test d'isolation :
 
 ```bash
-# Créer temporairement un conteneur dans VLAN_GUEST
-docker run --rm -it --network docker-cyber-lab_vlan_guest_net --ip 192.168.40.50 \
-  --cap-add NET_ADMIN debian:12-slim bash
+# Validation directe sur le dépôt courant
+bash ./scripts/test-vlan-matrix.sh
 
-# Dans ce conteneur :
-ip route add default via 192.168.40.1
-ping 192.168.20.10   # Doit ÉCHOUER (isolation)
-ping 8.8.8.8         # Doit RÉUSSIR
+# Vérifications ciblées manuelles si besoin
+docker exec guest1 nc -zw 3 192.168.20.10 80    # Doit échouer
+docker exec guest1 curl -fsSI http://example.com # Doit réussir
+docker exec client1 curl -fsS http://192.168.50.10 # Doit réussir
 ```
 
-**Livrable J17** : capture montrant l'isolation effective + matrice de flux validée.
+**Livrable J17** : sortie verte de `scripts/test-vlan-matrix.sh` + capture des reseaux Docker.
 
 ---
 
@@ -178,7 +189,7 @@ docker exec client1 curl -k --connect-timeout 5 https://192.168.10.1
 
 ### Jour 20 — Tests systématiques
 
-Créer un script de validation matrice de flux : `scripts/test-vlan-matrix.sh`
+Le dépôt contient maintenant le script de validation matrice de flux : `scripts/test-vlan-matrix.sh`
 
 ```bash
 #!/bin/bash
