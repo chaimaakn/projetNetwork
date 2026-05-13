@@ -2,23 +2,29 @@
 # =============================================================================
 # FW_ISP - Règles iptables (équivalent Rules WAN/LAN sur pfSense)
 # =============================================================================
-# Interfaces résolues dynamiquement à partir des IPs statiques définies dans
-# docker-compose.yml pour éviter toute dépendance à l'ordre des cartes réseau.
-# =============================================================================
 
-set -e
+set -euo pipefail
 . /usr/local/lib/lab-net.sh
+
+NODE_MGMT_IP=${NODE_MGMT_IP:-192.168.99.1}
+NODE_WAN_CLIENT_IP=${NODE_WAN_CLIENT_IP:-10.10.0.1}
+NODE_WAN_SERVER_IP=${NODE_WAN_SERVER_IP:-10.20.0.1}
+NODE_INTERNET_IP=${NODE_INTERNET_IP:-200.0.0.10}
+PEER_INTERNET_NODE_IP=${PEER_INTERNET_NODE_IP:-}
+PEER_WAN_CLIENT_NODE_IP=${PEER_WAN_CLIENT_NODE_IP:-}
+PEER_WAN_SERVER_NODE_IP=${PEER_WAN_SERVER_NODE_IP:-}
+PEER_MGMT_NODE_IP=${PEER_MGMT_NODE_IP:-}
 
 echo "[FW_ISP] Application des règles iptables..."
 
-require_if_by_ip MGMT_IF 192.168.99.1
-require_if_by_ip WAN_CLIENT_IF 10.10.0.1
-require_if_by_ip WAN_SERVER_IF 10.20.0.1
-require_if_by_ip INTERNET_IF 200.0.0.10
-log_if_assignment MGMT "$MGMT_IF" 192.168.99.1
-log_if_assignment WAN_CLIENT "$WAN_CLIENT_IF" 10.10.0.1
-log_if_assignment WAN_SERVER "$WAN_SERVER_IF" 10.20.0.1
-log_if_assignment INTERNET "$INTERNET_IF" 200.0.0.10
+require_if_by_ip MGMT_IF "$NODE_MGMT_IP"
+require_if_by_ip WAN_CLIENT_IF "$NODE_WAN_CLIENT_IP"
+require_if_by_ip WAN_SERVER_IF "$NODE_WAN_SERVER_IP"
+require_if_by_ip INTERNET_IF "$NODE_INTERNET_IP"
+log_if_assignment MGMT "$MGMT_IF" "$NODE_MGMT_IP"
+log_if_assignment WAN_CLIENT "$WAN_CLIENT_IF" "$NODE_WAN_CLIENT_IP"
+log_if_assignment WAN_SERVER "$WAN_SERVER_IF" "$NODE_WAN_SERVER_IP"
+log_if_assignment INTERNET "$INTERNET_IF" "$NODE_INTERNET_IP"
 
 # --- Reset complet des règles ---
 iptables -F
@@ -77,6 +83,21 @@ iptables -A INPUT -p udp --dport 123 -s 192.168.99.0/24 -j ACCEPT
 # --- Management : SSH/HTTPS uniquement depuis le réseau de management ---
 iptables -A INPUT -p tcp --dport 22  -s 192.168.99.0/24 -j ACCEPT
 iptables -A INPUT -p tcp --dport 443 -s 192.168.99.0/24 -j ACCEPT
+iptables -A INPUT -i "$INTERNET_IF" -p tcp -s 200.0.0.0/24 -m multiport --dports 80,443 -j ACCEPT
+iptables -A INPUT -i "$MGMT_IF" -p tcp -s 192.168.99.0/24 --dport 8404 -j ACCEPT
+
+if [ -n "$PEER_INTERNET_NODE_IP" ]; then
+	iptables -A INPUT -i "$INTERNET_IF" -p 112 -s "$PEER_INTERNET_NODE_IP" -j ACCEPT
+fi
+if [ -n "$PEER_WAN_CLIENT_NODE_IP" ]; then
+	iptables -A INPUT -i "$WAN_CLIENT_IF" -p 112 -s "$PEER_WAN_CLIENT_NODE_IP" -j ACCEPT
+fi
+if [ -n "$PEER_WAN_SERVER_NODE_IP" ]; then
+	iptables -A INPUT -i "$WAN_SERVER_IF" -p 112 -s "$PEER_WAN_SERVER_NODE_IP" -j ACCEPT
+fi
+if [ -n "$PEER_MGMT_NODE_IP" ]; then
+	iptables -A INPUT -i "$MGMT_IF" -p 112 -s "$PEER_MGMT_NODE_IP" -j ACCEPT
+fi
 
 # --- Forwarding LAN_CLIENT -> Internet ---
 iptables -A FORWARD -s 192.168.10.0/24 -o "$INTERNET_IF" -j ACCEPT

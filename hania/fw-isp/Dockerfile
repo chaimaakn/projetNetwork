@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dnsmasq \
     chrony \
     haproxy \
+    keepalived \
     tcpdump \
     rsyslog \
     curl \
@@ -26,16 +27,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copie des configurations
-COPY fw-isp/dnsmasq.conf      /etc/dnsmasq.conf
+COPY fw-isp/dnsmasq.conf      /opt/lab/dnsmasq.conf.tmpl
 COPY fw-isp/chrony.conf       /etc/chrony/chrony.conf
-COPY fw-isp/haproxy.cfg       /etc/haproxy/haproxy.cfg
+COPY fw-isp/haproxy.cfg       /opt/lab/haproxy.cfg.tmpl
+COPY fw-isp/keepalived.conf.tmpl /opt/lab/keepalived.conf.tmpl
 COPY common/net-helpers.sh    /usr/local/lib/lab-net.sh
 COPY fw-isp/rules.sh          /usr/local/bin/rules.sh
 COPY fw-isp/entrypoint.sh     /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh /usr/local/bin/rules.sh \
- && sed -i 's/\r$//' /entrypoint.sh /usr/local/bin/rules.sh /usr/local/lib/lab-net.sh /etc/dnsmasq.conf /etc/chrony/chrony.conf /etc/haproxy/haproxy.cfg \
- && mkdir -p /var/log/fw
+ && sed -i 's/\r$//' /entrypoint.sh /usr/local/bin/rules.sh /usr/local/lib/lab-net.sh /opt/lab/dnsmasq.conf.tmpl /etc/chrony/chrony.conf /opt/lab/haproxy.cfg.tmpl /opt/lab/keepalived.conf.tmpl \
+ && mkdir -p /var/log/fw /opt/lab
 
 EXPOSE 53/udp 53/tcp 67/udp 123/udp 80/tcp
 

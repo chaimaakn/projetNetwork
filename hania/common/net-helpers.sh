@@ -4,6 +4,11 @@ get_if_by_ip() {
 	ip -o -4 addr show | awk -v target="$1" '$4 ~ ("^" target "/") { print $2; exit }'
 }
 
+has_ip_address() {
+	local target_ip=$1
+	ip -o -4 addr show | awk -v target="$target_ip" '$4 ~ ("^" target "/") { found=1 } END { exit(found ? 0 : 1) }'
+}
+
 require_if_by_ip() {
 	local var_name=$1
 	local target_ip=$2
@@ -16,6 +21,38 @@ require_if_by_ip() {
 	fi
 
 	printf -v "$var_name" '%s' "$if_name"
+}
+
+wait_for_ip_assignment() {
+	local target_ip=$1
+	local max_attempts=${2:-20}
+	local delay_seconds=${3:-1}
+	local attempt=1
+
+	while [ "$attempt" -le "$max_attempts" ]; do
+		if has_ip_address "$target_ip"; then
+			return 0
+		fi
+
+		sleep "$delay_seconds"
+		attempt=$((attempt + 1))
+	done
+
+	return 1
+}
+
+render_template() {
+	local template_path=$1
+	local output_path=$2
+	shift 2
+
+	local sed_args=()
+	while [ "$#" -gt 1 ]; do
+		sed_args+=( -e "s|__${1}__|${2}|g" )
+		shift 2
+	done
+
+	sed "${sed_args[@]}" "$template_path" > "$output_path"
 }
 
 log_if_assignment() {

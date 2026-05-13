@@ -1,0 +1,98 @@
+global_defs {
+    enable_script_security
+    script_user root
+    router_id __ROUTER_ID__
+}
+
+vrrp_sync_group FW_ISP_SYNC {
+    group {
+        VI_INTERNET
+        VI_WAN_CLIENT
+        VI_WAN_SERVER
+        VI_MGMT
+    }
+}
+
+vrrp_instance VI_INTERNET {
+    state __STATE__
+    interface __INTERNET_IF__
+    virtual_router_id 51
+    priority __PRIORITY__
+    advert_int 1
+    garp_master_delay 1
+    garp_master_repeat 2
+    authentication {
+        auth_type PASS
+        auth_pass __AUTH_PASS__
+    }
+    unicast_src_ip __NODE_INTERNET_IP__
+    unicast_peer {
+        __PEER_INTERNET_NODE_IP__
+    }
+    virtual_ipaddress {
+        __VIP_INTERNET_IP__/24 dev __INTERNET_IF__
+    }
+}
+
+vrrp_instance VI_WAN_CLIENT {
+    state __STATE__
+    interface __WAN_CLIENT_IF__
+    virtual_router_id 52
+    priority __PRIORITY__
+    advert_int 1
+    garp_master_delay 1
+    garp_master_repeat 2
+    authentication {
+        auth_type PASS
+        auth_pass __AUTH_PASS__
+    }
+    unicast_src_ip __NODE_WAN_CLIENT_IP__
+    unicast_peer {
+        __PEER_WAN_CLIENT_NODE_IP__
+    }
+    virtual_ipaddress {
+        __VIP_WAN_CLIENT_IP__/24 dev __WAN_CLIENT_IF__
+    }
+}
+
+vrrp_instance VI_WAN_SERVER {
+    state __STATE__
+    interface __WAN_SERVER_IF__
+    virtual_router_id 53
+    priority __PRIORITY__
+    advert_int 1
+    garp_master_delay 1
+    garp_master_repeat 2
+    authentication {
+        auth_type PASS
+        auth_pass __AUTH_PASS__
+    }
+    unicast_src_ip __NODE_WAN_SERVER_IP__
+    unicast_peer {
+        __PEER_WAN_SERVER_NODE_IP__
+    }
+    virtual_ipaddress {
+        __VIP_WAN_SERVER_IP__/24 dev __WAN_SERVER_IF__
+    }
+}
+
+vrrp_instance VI_MGMT {
+    state __STATE__
+    interface __MGMT_IF__
+    virtual_router_id 54
+    priority __PRIORITY__
+    advert_int 1
+    garp_master_delay 1
+    garp_master_repeat 2
+    authentication {
+        auth_type PASS
+        auth_pass __AUTH_PASS__
+    }
+    unicast_src_ip __NODE_MGMT_IP__
+    unicast_peer {
+        __PEER_MGMT_NODE_IP__
+    }
+    virtual_ipaddress {
+        __VIP_MGMT_IP__/24 dev __MGMT_IF__
+    }
+}

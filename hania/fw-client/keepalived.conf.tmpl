@@ -1,0 +1,123 @@
+global_defs {
+    enable_script_security
+    script_user root
+    router_id __ROUTER_ID__
+}
+
+vrrp_sync_group FW_CLIENT_SYNC {
+    group {
+        VI_WAN
+        VI_LAN
+        VI_VOIP
+        VI_GUEST
+        VI_MGMT
+    }
+    notify_master "/usr/local/bin/ha-state.sh master"
+    notify_backup "/usr/local/bin/ha-state.sh backup"
+    notify_fault "/usr/local/bin/ha-state.sh fault"
+}
+
+vrrp_instance VI_WAN {
+    state __STATE__
+    interface __WAN_IF__
+    virtual_router_id 61
+    priority __PRIORITY__
+    advert_int 1
+    garp_master_delay 1
+    garp_master_repeat 2
+    authentication {
+        auth_type PASS
+        auth_pass __AUTH_PASS__
+    }
+    unicast_src_ip __NODE_WAN_IP__
+    unicast_peer {
+        __PEER_WAN_NODE_IP__
+    }
+    virtual_ipaddress {
+        __VIP_WAN_IP__/24 dev __WAN_IF__
+    }
+}
+
+vrrp_instance VI_LAN {
+    state __STATE__
+    interface __LAN_IF__
+    virtual_router_id 62
+    priority __PRIORITY__
+    advert_int 1
+    garp_master_delay 1
+    garp_master_repeat 2
+    authentication {
+        auth_type PASS
+        auth_pass __AUTH_PASS__
+    }
+    unicast_src_ip __NODE_LAN_IP__
+    unicast_peer {
+        __PEER_LAN_NODE_IP__
+    }
+    virtual_ipaddress {
+        __VIP_LAN_IP__/24 dev __LAN_IF__
+    }
+}
+
+vrrp_instance VI_VOIP {
+    state __STATE__
+    interface __VOIP_IF__
+    virtual_router_id 63
+    priority __PRIORITY__
+    advert_int 1
+    garp_master_delay 1
+    garp_master_repeat 2
+    authentication {
+        auth_type PASS
+        auth_pass __AUTH_PASS__
+    }
+    unicast_src_ip __NODE_VOIP_IP__
+    unicast_peer {
+        __PEER_VOIP_NODE_IP__
+    }
+    virtual_ipaddress {
+        __VIP_VOIP_IP__/24 dev __VOIP_IF__
+    }
+}
+
+vrrp_instance VI_GUEST {
+    state __STATE__
+    interface __GUEST_IF__
+    virtual_router_id 64
+    priority __PRIORITY__
+    advert_int 1
+    garp_master_delay 1
+    garp_master_repeat 2
+    authentication {
+        auth_type PASS
+        auth_pass __AUTH_PASS__
+    }
+    unicast_src_ip __NODE_GUEST_IP__
+    unicast_peer {
+        __PEER_GUEST_NODE_IP__
+    }
+    virtual_ipaddress {
+        __VIP_GUEST_IP__/24 dev __GUEST_IF__
+    }
+}
+
+vrrp_instance VI_MGMT {
+    state __STATE__
+    interface __MGMT_IF__
+    virtual_router_id 65
+    priority __PRIORITY__
+    advert_int 1
+    garp_master_delay 1
+    garp_master_repeat 2
+    authentication {
+        auth_type PASS
+        auth_pass __AUTH_PASS__
+    }
+    unicast_src_ip __NODE_MGMT_IP__
+    unicast_peer {
+        __PEER_MGMT_NODE_IP__
+    }
+    virtual_ipaddress {
+        __VIP_MGMT_IP__/24 dev __MGMT_IF__
+    }
+}

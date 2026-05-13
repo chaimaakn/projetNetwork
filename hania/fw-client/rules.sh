@@ -2,25 +2,36 @@
 # =============================================================================
 # FW_CLIENT - Règles iptables (équivalent IPv4 Policy FortiGate)
 # =============================================================================
-# Interfaces résolues dynamiquement à partir des IPs statiques définies dans
-# docker-compose.yml pour éviter toute dépendance à l'ordre des cartes réseau.
-# =============================================================================
 
-set -e
+set -euo pipefail
 . /usr/local/lib/lab-net.sh
+
+NODE_LAN_IP=${NODE_LAN_IP:-192.168.10.1}
+NODE_VOIP_IP=${NODE_VOIP_IP:-192.168.30.1}
+NODE_GUEST_IP=${NODE_GUEST_IP:-192.168.40.1}
+NODE_MGMT_IP=${NODE_MGMT_IP:-192.168.99.10}
+NODE_WAN_IP=${NODE_WAN_IP:-10.10.0.2}
+UPSTREAM_WAN_GW=${UPSTREAM_WAN_GW:-10.10.0.1}
+UPSTREAM_MGMT_DNS=${UPSTREAM_MGMT_DNS:-192.168.99.1}
+PEER_WAN_NODE_IP=${PEER_WAN_NODE_IP:-}
+PEER_LAN_NODE_IP=${PEER_LAN_NODE_IP:-}
+PEER_VOIP_NODE_IP=${PEER_VOIP_NODE_IP:-}
+PEER_GUEST_NODE_IP=${PEER_GUEST_NODE_IP:-}
+PEER_MGMT_NODE_IP=${PEER_MGMT_NODE_IP:-}
+CONNTRACKD_PEER_IP=${CONNTRACKD_PEER_IP:-}
 
 echo "[FW_CLIENT] Application des règles iptables..."
 
-require_if_by_ip LAN_IF 192.168.10.1
-require_if_by_ip VOIP_IF 192.168.30.1
-require_if_by_ip GUEST_IF 192.168.40.1
-require_if_by_ip MGMT_IF 192.168.99.10
-require_if_by_ip WAN_IF 10.10.0.2
-log_if_assignment LAN "$LAN_IF" 192.168.10.1
-log_if_assignment VOIP "$VOIP_IF" 192.168.30.1
-log_if_assignment GUEST "$GUEST_IF" 192.168.40.1
-log_if_assignment MGMT "$MGMT_IF" 192.168.99.10
-log_if_assignment WAN "$WAN_IF" 10.10.0.2
+require_if_by_ip LAN_IF "$NODE_LAN_IP"
+require_if_by_ip VOIP_IF "$NODE_VOIP_IP"
+require_if_by_ip GUEST_IF "$NODE_GUEST_IP"
+require_if_by_ip MGMT_IF "$NODE_MGMT_IP"
+require_if_by_ip WAN_IF "$NODE_WAN_IP"
+log_if_assignment LAN "$LAN_IF" "$NODE_LAN_IP"
+log_if_assignment VOIP "$VOIP_IF" "$NODE_VOIP_IP"
+log_if_assignment GUEST "$GUEST_IF" "$NODE_GUEST_IP"
+log_if_assignment MGMT "$MGMT_IF" "$NODE_MGMT_IP"
+log_if_assignment WAN "$WAN_IF" "$NODE_WAN_IP"
 
 create_or_reset_netset() {
 	local set_name=$1
@@ -95,6 +106,25 @@ iptables -A INPUT -p udp --dport 500  -j ACCEPT
 iptables -A INPUT -p udp --dport 4500 -j ACCEPT
 iptables -A INPUT -p esp -j ACCEPT
 
+if [ -n "$PEER_WAN_NODE_IP" ]; then
+	iptables -A INPUT -i "$WAN_IF" -p 112 -s "$PEER_WAN_NODE_IP" -j ACCEPT
+fi
+if [ -n "$PEER_LAN_NODE_IP" ]; then
+	iptables -A INPUT -i "$LAN_IF" -p 112 -s "$PEER_LAN_NODE_IP" -j ACCEPT
+fi
+if [ -n "$PEER_VOIP_NODE_IP" ]; then
+	iptables -A INPUT -i "$VOIP_IF" -p 112 -s "$PEER_VOIP_NODE_IP" -j ACCEPT
+fi
+if [ -n "$PEER_GUEST_NODE_IP" ]; then
+	iptables -A INPUT -i "$GUEST_IF" -p 112 -s "$PEER_GUEST_NODE_IP" -j ACCEPT
+fi
+if [ -n "$PEER_MGMT_NODE_IP" ]; then
+	iptables -A INPUT -i "$MGMT_IF" -p 112 -s "$PEER_MGMT_NODE_IP" -j ACCEPT
+fi
+if [ -n "$CONNTRACKD_PEER_IP" ]; then
+	iptables -A INPUT -i "$MGMT_IF" -p udp -s "$CONNTRACKD_PEER_IP" --dport 3780 -j ACCEPT
+fi
+
 # Anti-spoofing des segments locaux
 iptables -A FORWARD -i "$LAN_IF" ! -s 192.168.10.0/24 -j DROP
 iptables -A FORWARD -i "$VOIP_IF" ! -s 192.168.30.0/24 -j DROP
@@ -117,22 +147,22 @@ iptables -A FORWARD -m set --match-set users_net src -m set --match-set voip_net
 iptables -A FORWARD -m set --match-set users_net src -m set --match-set guest_net dst -j DROP
 
 # VOIP : DNS + SIP + RTP vers l'exterieur uniquement
-iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -d 10.10.0.1 -p udp --dport 53 -j ACCEPT
-iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -d 10.10.0.1 -p tcp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -d "$UPSTREAM_WAN_GW" -p udp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -d "$UPSTREAM_WAN_GW" -p tcp --dport 53 -j ACCEPT
 iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -p udp --dport 5060 -j ACCEPT
 iptables -A FORWARD -i "$VOIP_IF" -o "$WAN_IF" -s 192.168.30.0/24 -p udp --dport 10000:20000 -j ACCEPT
 iptables -A FORWARD -i "$VOIP_IF" -s 192.168.30.0/24 -d 192.168.0.0/16 -j DROP
 
 # GUEST : Internet HTTP/HTTPS + DNS uniquement, jamais l'interne
 iptables -A FORWARD -i "$GUEST_IF" -s 192.168.40.0/24 -d 192.168.0.0/16 -j DROP
-iptables -A FORWARD -i "$GUEST_IF" -o "$WAN_IF" -s 192.168.40.0/24 -d 10.10.0.1 -p udp --dport 53 -j ACCEPT
-iptables -A FORWARD -i "$GUEST_IF" -o "$WAN_IF" -s 192.168.40.0/24 -d 10.10.0.1 -p tcp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$GUEST_IF" -o "$WAN_IF" -s 192.168.40.0/24 -d "$UPSTREAM_WAN_GW" -p udp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$GUEST_IF" -o "$WAN_IF" -s 192.168.40.0/24 -d "$UPSTREAM_WAN_GW" -p tcp --dport 53 -j ACCEPT
 iptables -A FORWARD -i "$GUEST_IF" -o "$WAN_IF" -s 192.168.40.0/24 -p tcp -m multiport --dports 80,443 -j ACCEPT
 
 # --- DNS/NTP du LAN vers FW_ISP via le réseau de management ---
-iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d 192.168.99.1 -p udp --dport 53 -j ACCEPT
-iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d 192.168.99.1 -p tcp --dport 53 -j ACCEPT
-iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d 192.168.99.1 -p udp --dport 123 -j ACCEPT
+iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d "$UPSTREAM_MGMT_DNS" -p udp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d "$UPSTREAM_MGMT_DNS" -p tcp --dport 53 -j ACCEPT
+iptables -A FORWARD -i "$LAN_IF" -o "$MGMT_IF" -s 192.168.10.0/24 -d "$UPSTREAM_MGMT_DNS" -p udp --dport 123 -j ACCEPT
 
 # Sortie Internet generale pour USERS
 iptables -A FORWARD -i "$LAN_IF" -o "$WAN_IF" -m set --match-set users_net src -j ACCEPT

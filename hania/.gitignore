@@ -1,4 +1,9 @@
 fw-client/logs/*.log
 fw-client/logs/suricata/*
+fw-client-2/logs/*.log
+fw-client-2/logs/suricata/*
 fw-isp/logs/*.log
+fw-isp-2/logs/*.log
 fw-server/logs/*.log
+fw-server-2/logs/*.log
+fw-server-2/logs/suricata/*

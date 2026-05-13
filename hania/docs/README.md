@@ -4,13 +4,13 @@
 
 ## 🎯 Objectif de cette adaptation
 
-Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, Suricata en IDS, le monitoring, le hardening avance de Phase 2 et la base des démonstrations de pentest.
+Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, Suricata en IDS, le monitoring, le hardening avance de Phase 2, la haute disponibilité keepalived / conntrackd et la base des démonstrations de pentest.
 
 | Composant original | Remplacement Docker | Fonction |
 |---|---|---|
-| **pfSense** | `fw-isp` (Debian + iptables + dnsmasq + chrony + HAProxy) | Firewall ISP, DNS, NTP, load balancer |
-| **FortiGate FW_CLIENT** | `fw-client` (Debian + iptables + strongSwan + dnsmasq + squid) | FW client, VPN IPsec, DHCP, filtrage web |
-| **FortiGate FW_SERVER** | `fw-server` (Debian + iptables + strongSwan + chrony) | FW serveur, VPN IPsec, NTP |
+| **pfSense** | `fw-isp` + `fw-isp-2` (Debian + iptables + dnsmasq + chrony + HAProxy + keepalived) | Firewall ISP HA, DNS, NTP, publication HTTP |
+| **FortiGate FW_CLIENT** | `fw-client` + `fw-client-2` (Debian + iptables + strongSwan + dnsmasq + squid + keepalived + conntrackd) | FW client HA, VPN IPsec, DHCP, filtrage web |
+| **FortiGate FW_SERVER** | `fw-server` + `fw-server-2` (Debian + iptables + strongSwan + chrony + keepalived + conntrackd) | FW serveur HA, VPN IPsec, NTP |
 | **VPN IPsec IKEv2** | strongSwan (AES-256, SHA-256, modp2048) | Équivalent pédagogique |
 | **Kali Linux** | Image officielle `kalilinux/kali-rolling` | Identique |
 | **Uptime Kuma** | Image officielle `louislam/uptime-kuma` | Identique |
@@ -24,9 +24,10 @@ Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + 
 - La segmentation Phase 2 coeur est integree : VLAN VOIP, VLAN GUEST, DMZ et matrice de flux testee
 - Le hardening avance Phase 2 est livre : objets et groupes `ipset` sur `fw-client`, liste `blocked_domains.txt` versionnee pour Squid, garde-fous egress sur `fw-isp`
 - La brique IDS Phase 2 est livree : `Suricata` tourne sur `fw-client`, journalise dans `fw-client/logs/suricata/` et valide des alertes de laboratoire versionnees
-- Le jeu de validation couvre maintenant `test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh` et `test-full-lab.sh`
+- La brique HA Phase 2 est livree : `keepalived` maintient les VIPs historiques et `conntrackd` replique les etats des deux paires FortiGate-like
+- Le jeu de validation couvre maintenant `test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh`, `test-ha.sh` et `test-full-lab.sh`
 - Les documents `PHASE2.md` et `PHASE3.md` servent maintenant de support pour les extensions suivantes et la campagne de validation offensive
-- Evolutions possibles : `keepalived` / VRRP / CARP, `Wazuh` et les blocs HA / SIEM restants de la roadmap
+- Evolutions possibles : `Wazuh`, l'inspection TLS dediee et les blocs SIEM / SOC restants de la roadmap
 
 ## 🗺️ Architecture déployée
 
@@ -64,6 +65,8 @@ Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + 
          └─────────────────┘                └─────────────────────┘
 ```
 
+Le deploiement reel ajoute les noeuds de secours `fw-isp-2`, `fw-client-2` et `fw-server-2`. Les adresses historiques visibles dans le schema restent les VIPs de service, preservees pendant les bascules.
+
 ## 🚀 Démarrage rapide
 
 ### Pré-requis
@@ -97,6 +100,7 @@ chmod +x scripts/test-connectivity.sh
 chmod +x scripts/test-vlan-matrix.sh
 chmod +x scripts/test-policy-hardening.sh
 chmod +x scripts/test-suricata.sh
+chmod +x scripts/test-ha.sh
 chmod +x scripts/test-full-lab.sh
 
 # Smoke test
@@ -110,6 +114,9 @@ bash ./scripts/test-policy-hardening.sh
 
 # Validation IDS / Suricata
 bash ./scripts/test-suricata.sh
+
+# Validation HA
+bash ./scripts/test-ha.sh
 
 # Validation complete
 bash ./scripts/test-full-lab.sh
@@ -172,8 +179,8 @@ docker compose down -v --rmi all
 
 | Point | Original | Docker | Impact |
 |---|---|---|---|
-| **HA pfSense (CARP)** | Possible | Extension optionnelle | Reste la grande brique Phase 2 non livree |
-| **HA FortiGate** | Cluster complet | Extension optionnelle | Reste la grande brique Phase 2 non livree |
+| **HA pfSense (CARP)** | Possible | `keepalived` unicast + VIPs sur `fw-isp` / `fw-isp-2` | Equivalent pedagogique valide, sans GUI ni synchro d'etat pfSense |
+| **HA FortiGate** | Cluster complet | `keepalived` + `conntrackd` sur `fw-client*` et `fw-server*` | Bascule et sync L3/L4 valides, mais pas de FGCP complet |
 | **Inspection SSL/TLS profonde** | FortiGate native | Extension optionnelle | Squid SslBump demanderait une integration dediee |
 | **Inspection paquet niveau ASIC** | FortiGate | Logiciel uniquement | Un IDS type Suricata peut enrichir le socle |
 | **SIEM / corrélation** | Plateforme dédiée | Extension optionnelle | `Wazuh` reste la grande brique naturelle de Phase 4 |

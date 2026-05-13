@@ -21,19 +21,94 @@ services:
       - SYS_MODULE
     sysctls:
       - net.ipv4.ip_forward=1
+      - net.ipv4.ip_nonlocal_bind=1
       - net.ipv4.conf.all.rp_filter=0
       - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.arp_ignore=1
+      - net.ipv4.conf.all.arp_announce=2
+    environment:
+      HA_ENABLED: "1"
+      HA_STATE: MASTER
+      HA_PRIORITY: "200"
+      HA_AUTH_PASS: ispvr42
+      NODE_INTERNET_IP: 200.0.0.11
+      NODE_WAN_CLIENT_IP: 10.10.0.11
+      NODE_WAN_SERVER_IP: 10.20.0.11
+      NODE_MGMT_IP: 192.168.99.11
+      VIP_INTERNET_IP: 200.0.0.10
+      VIP_WAN_CLIENT_IP: 10.10.0.1
+      VIP_WAN_SERVER_IP: 10.20.0.1
+      VIP_MGMT_IP: 192.168.99.1
+      PEER_INTERNET_NODE_IP: 200.0.0.12
+      PEER_WAN_CLIENT_NODE_IP: 10.10.0.12
+      PEER_WAN_SERVER_NODE_IP: 10.20.0.12
+      PEER_MGMT_NODE_IP: 192.168.99.12
+      CLIENT_WAN_VIP: 10.10.0.2
+      SERVER_WAN_VIP: 10.20.0.2
+      CLIENT_MGMT_VIP: 192.168.99.10
+      SERVER_MGMT_VIP: 192.168.99.20
     networks:
       internet_net:
-        ipv4_address: 200.0.0.10   # Côté "Internet simulé"
+        ipv4_address: 200.0.0.11   # Noeud primaire, VIP publique = 200.0.0.10
       wan_client_net:
-        ipv4_address: 10.10.0.1    # Passerelle pour FW_CLIENT
+        ipv4_address: 10.10.0.11   # Noeud primaire, VIP = 10.10.0.1
       wan_server_net:
-        ipv4_address: 10.20.0.1    # Passerelle pour FW_SERVER
+        ipv4_address: 10.20.0.11   # Noeud primaire, VIP = 10.20.0.1
       mgmt_net:
-        ipv4_address: 192.168.99.1 # Interface de management
+        ipv4_address: 192.168.99.11 # Noeud primaire, VIP = 192.168.99.1
     volumes:
       - ./fw-isp/logs:/var/log/fw
+    restart: unless-stopped
+
+  fw-isp-2:
+    build:
+      context: .
+      dockerfile: fw-isp/Dockerfile
+    container_name: fw-isp-2
+    hostname: fw-isp-2
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.ip_nonlocal_bind=1
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.arp_ignore=1
+      - net.ipv4.conf.all.arp_announce=2
+    environment:
+      HA_ENABLED: "1"
+      HA_STATE: BACKUP
+      HA_PRIORITY: "150"
+      HA_AUTH_PASS: ispvr42
+      NODE_INTERNET_IP: 200.0.0.12
+      NODE_WAN_CLIENT_IP: 10.10.0.12
+      NODE_WAN_SERVER_IP: 10.20.0.12
+      NODE_MGMT_IP: 192.168.99.12
+      VIP_INTERNET_IP: 200.0.0.10
+      VIP_WAN_CLIENT_IP: 10.10.0.1
+      VIP_WAN_SERVER_IP: 10.20.0.1
+      VIP_MGMT_IP: 192.168.99.1
+      PEER_INTERNET_NODE_IP: 200.0.0.11
+      PEER_WAN_CLIENT_NODE_IP: 10.10.0.11
+      PEER_WAN_SERVER_NODE_IP: 10.20.0.11
+      PEER_MGMT_NODE_IP: 192.168.99.11
+      CLIENT_WAN_VIP: 10.10.0.2
+      SERVER_WAN_VIP: 10.20.0.2
+      CLIENT_MGMT_VIP: 192.168.99.10
+      SERVER_MGMT_VIP: 192.168.99.20
+    networks:
+      internet_net:
+        ipv4_address: 200.0.0.12
+      wan_client_net:
+        ipv4_address: 10.10.0.12
+      wan_server_net:
+        ipv4_address: 10.20.0.12
+      mgmt_net:
+        ipv4_address: 192.168.99.12
+    volumes:
+      - ./fw-isp-2/logs:/var/log/fw
     restart: unless-stopped
 
   # =========================================================================
@@ -51,23 +126,112 @@ services:
       - SYS_MODULE
     sysctls:
       - net.ipv4.ip_forward=1
+      - net.ipv4.ip_nonlocal_bind=1
       - net.ipv4.conf.all.rp_filter=0
       - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.arp_ignore=1
+      - net.ipv4.conf.all.arp_announce=2
+    environment:
+      HA_ENABLED: "1"
+      HA_STATE: MASTER
+      HA_PRIORITY: "200"
+      HA_AUTH_PASS: clivr42
+      NODE_WAN_IP: 10.10.0.21
+      NODE_LAN_IP: 192.168.10.21
+      NODE_VOIP_IP: 192.168.30.21
+      NODE_GUEST_IP: 192.168.40.21
+      NODE_MGMT_IP: 192.168.99.21
+      VIP_WAN_IP: 10.10.0.2
+      VIP_LAN_IP: 192.168.10.1
+      VIP_VOIP_IP: 192.168.30.1
+      VIP_GUEST_IP: 192.168.40.1
+      VIP_MGMT_IP: 192.168.99.10
+      PEER_WAN_NODE_IP: 10.10.0.22
+      PEER_LAN_NODE_IP: 192.168.10.22
+      PEER_VOIP_NODE_IP: 192.168.30.22
+      PEER_GUEST_NODE_IP: 192.168.40.22
+      PEER_MGMT_NODE_IP: 192.168.99.22
+      UPSTREAM_WAN_GW: 10.10.0.1
+      UPSTREAM_MGMT_DNS: 192.168.99.1
+      PEER_VPN_WAN_IP: 10.20.0.2
+      CONNTRACKD_LOCAL_IP: 192.168.99.21
+      CONNTRACKD_PEER_IP: 192.168.99.22
     networks:
       wan_client_net:
-        ipv4_address: 10.10.0.2    # WAN side
+        ipv4_address: 10.10.0.21   # Noeud primaire, VIP WAN = 10.10.0.2
       lan_client_net:
-        ipv4_address: 192.168.10.1 # LAN CLIENT gateway
+        ipv4_address: 192.168.10.21 # Noeud primaire, VIP LAN = 192.168.10.1
       vlan_voip_net:
-        ipv4_address: 192.168.30.1 # VLAN VOIP gateway
+        ipv4_address: 192.168.30.21 # Noeud primaire, VIP VOIP = 192.168.30.1
       vlan_guest_net:
-        ipv4_address: 192.168.40.1 # VLAN GUEST gateway
+        ipv4_address: 192.168.40.21 # Noeud primaire, VIP GUEST = 192.168.40.1
       mgmt_net:
-        ipv4_address: 192.168.99.10
+        ipv4_address: 192.168.99.21
     depends_on:
       - fw-isp
+      - fw-isp-2
     volumes:
       - ./fw-client/logs:/var/log/fw
+    restart: unless-stopped
+
+  fw-client-2:
+    build:
+      context: .
+      dockerfile: fw-client/Dockerfile
+    container_name: fw-client-2
+    hostname: fw-client-2
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.ip_nonlocal_bind=1
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.arp_ignore=1
+      - net.ipv4.conf.all.arp_announce=2
+    environment:
+      HA_ENABLED: "1"
+      HA_STATE: BACKUP
+      HA_PRIORITY: "150"
+      HA_AUTH_PASS: clivr42
+      NODE_WAN_IP: 10.10.0.22
+      NODE_LAN_IP: 192.168.10.22
+      NODE_VOIP_IP: 192.168.30.22
+      NODE_GUEST_IP: 192.168.40.22
+      NODE_MGMT_IP: 192.168.99.22
+      VIP_WAN_IP: 10.10.0.2
+      VIP_LAN_IP: 192.168.10.1
+      VIP_VOIP_IP: 192.168.30.1
+      VIP_GUEST_IP: 192.168.40.1
+      VIP_MGMT_IP: 192.168.99.10
+      PEER_WAN_NODE_IP: 10.10.0.21
+      PEER_LAN_NODE_IP: 192.168.10.21
+      PEER_VOIP_NODE_IP: 192.168.30.21
+      PEER_GUEST_NODE_IP: 192.168.40.21
+      PEER_MGMT_NODE_IP: 192.168.99.21
+      UPSTREAM_WAN_GW: 10.10.0.1
+      UPSTREAM_MGMT_DNS: 192.168.99.1
+      PEER_VPN_WAN_IP: 10.20.0.2
+      CONNTRACKD_LOCAL_IP: 192.168.99.22
+      CONNTRACKD_PEER_IP: 192.168.99.21
+    networks:
+      wan_client_net:
+        ipv4_address: 10.10.0.22
+      lan_client_net:
+        ipv4_address: 192.168.10.22
+      vlan_voip_net:
+        ipv4_address: 192.168.30.22
+      vlan_guest_net:
+        ipv4_address: 192.168.40.22
+      mgmt_net:
+        ipv4_address: 192.168.99.22
+    depends_on:
+      - fw-isp
+      - fw-isp-2
+    volumes:
+      - ./fw-client-2/logs:/var/log/fw
     restart: unless-stopped
 
   # =========================================================================
@@ -85,21 +249,102 @@ services:
       - SYS_MODULE
     sysctls:
       - net.ipv4.ip_forward=1
+      - net.ipv4.ip_nonlocal_bind=1
       - net.ipv4.conf.all.rp_filter=0
       - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.arp_ignore=1
+      - net.ipv4.conf.all.arp_announce=2
+    environment:
+      HA_ENABLED: "1"
+      HA_STATE: MASTER
+      HA_PRIORITY: "200"
+      HA_AUTH_PASS: srvvr42
+      NODE_WAN_IP: 10.20.0.21
+      NODE_LAN_IP: 192.168.20.21
+      NODE_DMZ_IP: 192.168.50.21
+      NODE_MGMT_IP: 192.168.99.31
+      VIP_WAN_IP: 10.20.0.2
+      VIP_LAN_IP: 192.168.20.1
+      VIP_DMZ_IP: 192.168.50.1
+      VIP_MGMT_IP: 192.168.99.20
+      PEER_WAN_NODE_IP: 10.20.0.22
+      PEER_LAN_NODE_IP: 192.168.20.22
+      PEER_DMZ_NODE_IP: 192.168.50.22
+      PEER_MGMT_NODE_IP: 192.168.99.32
+      UPSTREAM_WAN_GW: 10.20.0.1
+      UPSTREAM_MGMT_DNS: 192.168.99.1
+      PEER_VPN_WAN_IP: 10.10.0.2
+      CONNTRACKD_LOCAL_IP: 192.168.99.31
+      CONNTRACKD_PEER_IP: 192.168.99.32
     networks:
       wan_server_net:
-        ipv4_address: 10.20.0.2    # WAN side
+        ipv4_address: 10.20.0.21   # Noeud primaire, VIP WAN = 10.20.0.2
       lan_server_net:
-        ipv4_address: 192.168.20.1 # LAN SERVER gateway
+        ipv4_address: 192.168.20.21 # Noeud primaire, VIP LAN = 192.168.20.1
       dmz_net:
-        ipv4_address: 192.168.50.1 # DMZ gateway
+        ipv4_address: 192.168.50.21 # Noeud primaire, VIP DMZ = 192.168.50.1
       mgmt_net:
-        ipv4_address: 192.168.99.20
+        ipv4_address: 192.168.99.31
     depends_on:
       - fw-isp
+      - fw-isp-2
     volumes:
       - ./fw-server/logs:/var/log/fw
+    restart: unless-stopped
+
+  fw-server-2:
+    build:
+      context: .
+      dockerfile: fw-server/Dockerfile
+    container_name: fw-server-2
+    hostname: fw-server-2
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.ip_nonlocal_bind=1
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.arp_ignore=1
+      - net.ipv4.conf.all.arp_announce=2
+    environment:
+      HA_ENABLED: "1"
+      HA_STATE: BACKUP
+      HA_PRIORITY: "150"
+      HA_AUTH_PASS: srvvr42
+      NODE_WAN_IP: 10.20.0.22
+      NODE_LAN_IP: 192.168.20.22
+      NODE_DMZ_IP: 192.168.50.22
+      NODE_MGMT_IP: 192.168.99.32
+      VIP_WAN_IP: 10.20.0.2
+      VIP_LAN_IP: 192.168.20.1
+      VIP_DMZ_IP: 192.168.50.1
+      VIP_MGMT_IP: 192.168.99.20
+      PEER_WAN_NODE_IP: 10.20.0.21
+      PEER_LAN_NODE_IP: 192.168.20.21
+      PEER_DMZ_NODE_IP: 192.168.50.21
+      PEER_MGMT_NODE_IP: 192.168.99.31
+      UPSTREAM_WAN_GW: 10.20.0.1
+      UPSTREAM_MGMT_DNS: 192.168.99.1
+      PEER_VPN_WAN_IP: 10.10.0.2
+      CONNTRACKD_LOCAL_IP: 192.168.99.32
+      CONNTRACKD_PEER_IP: 192.168.99.31
+    networks:
+      wan_server_net:
+        ipv4_address: 10.20.0.22
+      lan_server_net:
+        ipv4_address: 192.168.20.22
+      dmz_net:
+        ipv4_address: 192.168.50.22
+      mgmt_net:
+        ipv4_address: 192.168.99.32
+    depends_on:
+      - fw-isp
+      - fw-isp-2
+    volumes:
+      - ./fw-server-2/logs:/var/log/fw
     restart: unless-stopped
 
   # =========================================================================

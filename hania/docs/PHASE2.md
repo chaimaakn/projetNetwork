@@ -6,7 +6,7 @@
 
 > 💡 **Note Docker** : les VLANs natifs (802.1Q) sont possibles avec Docker mais lourds. Nous reproduisons leur **comportement fonctionnel** avec des **réseaux Docker bridge séparés**, ce qui est pédagogiquement équivalent.
 
-> **Statut courant** : la segmentation coeur de Phase 2, le hardening avance et la premiere brique IDS sont maintenant presents dans le depot avec `vlan_voip_net`, `vlan_guest_net`, `dmz_net`, les hotes `voip1`, `guest1`, `dmz-web`, `internet-probe`, les objets `ipset` de `fw-client`, la liste versionnee `fw-client/blocked_domains.txt`, `Suricata` sur `fw-client`, les garde-fous egress de `fw-isp`, et les scripts `scripts/test-vlan-matrix.sh`, `scripts/test-policy-hardening.sh` et `scripts/test-suricata.sh`. Les blocs HA et SIEM restent les prochaines grosses tranches.
+> **Statut courant** : la segmentation coeur de Phase 2, le hardening avance, la brique IDS et la haute disponibilite sont maintenant presents dans le depot avec `vlan_voip_net`, `vlan_guest_net`, `dmz_net`, les hotes `voip1`, `guest1`, `dmz-web`, `internet-probe`, les objets `ipset` de `fw-client`, la liste versionnee `fw-client/blocked_domains.txt`, `Suricata` sur `fw-client`, les garde-fous egress de `fw-isp`, les paires `fw-isp` / `fw-isp-2`, `fw-client` / `fw-client-2`, `fw-server` / `fw-server-2`, et les scripts `scripts/test-vlan-matrix.sh`, `scripts/test-policy-hardening.sh`, `scripts/test-suricata.sh`, `scripts/test-ha.sh` et `scripts/test-full-lab.sh`. La prochaine grosse tranche restante est le SIEM / la correlation.
 
 ## 🗓️ Semaine 4 — Segmentation VLAN (J16-J20)
 
@@ -400,96 +400,57 @@ Concepts clés :
 
 ### Jour 27 — HA pfSense-like avec Keepalived
 
-**Approche Docker** : utiliser `keepalived` pour simuler CARP/VRRP.
+**Statut depot** : deja implemente dans `docker-compose.yml`, `fw-isp/keepalived.conf.tmpl`, `fw-isp/entrypoint.sh` et `scripts/test-ha.sh`.
 
-Créer `fw-isp-2/` (copie du fw-isp) :
+Le design retenu conserve les adresses historiques comme VIPs de service et attribue des IPs de noeud distinctes aux deux pares-feu ISP :
+
+- noeuds `fw-isp` / `fw-isp-2` : `200.0.0.11` / `200.0.0.12`, `10.10.0.11` / `10.10.0.12`, `10.20.0.11` / `10.20.0.12`, `192.168.99.11` / `192.168.99.12`
+- VIPs preservees : `200.0.0.10`, `10.10.0.1`, `10.20.0.1`, `192.168.99.1`
+- VRRP keepalived en unicast sur chaque segment, avec reprise du DNS, du NTP, du routage et du frontend HAProxy
+
+Validation minimale :
 ```bash
-cp -r fw-isp fw-isp-2
+bash ./scripts/test-ha.sh
+docker exec fw-isp ip -o -4 addr show | grep '200.0.0.10/'
+docker exec fw-isp-2 ip -o -4 addr show | grep '200.0.0.10/'
 ```
 
-Ajouter au `Dockerfile` :
-```dockerfile
-RUN apt-get install -y keepalived
-```
-
-Configuration `keepalived.conf` (master) :
-```
-vrrp_instance VI_1 {
-    state MASTER
-    interface eth0
-    virtual_router_id 51
-    priority 100
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass labcyber
-    }
-    virtual_ipaddress {
-        200.0.0.100/24
-    }
-}
-```
-
-Configuration backup (priority 90).
-
-Test failover :
-```bash
-docker stop fw-isp           # tuer le master
-# Vérifier que fw-isp-2 prend la VIP en quelques secondes
-docker exec fw-isp-2 ip addr show eth0 | grep 200.0.0.100
-```
-
-**Mesure RTO** : temps depuis l'arrêt jusqu'à la reprise du service.
+**Mesure RTO** : la validation automatisee mesure le delai de reprise de la VIP et de la publication HTTP pendant `docker stop fw-isp`.
 
 ---
 
 ### Jour 28 — HA FortiGate-like (Active/Passive)
 
-Même principe pour les FortiGate-like : créer `fw-client-2`, configurer keepalived sur les interfaces LAN et WAN.
+**Statut depot** : deja implemente pour `fw-client` / `fw-client-2` et `fw-server` / `fw-server-2`.
 
-Pour la sync de session avec strongSwan : utiliser `conntrackd` (synchronisation conntrack).
+Le design applique keepalived sur les VIPs WAN, LAN, DMZ et management, et `conntrackd` sur `mgmt_net` pour la synchronisation d'etat :
 
+- `fw-client*` preserve `10.10.0.2`, `192.168.10.1`, `192.168.30.1`, `192.168.40.1`, `192.168.99.10` comme VIPs
+- `fw-server*` preserve `10.20.0.2`, `192.168.20.1`, `192.168.50.1`, `192.168.99.20` comme VIPs
+- `ha-state.sh` pilote les transitions master / backup pour IPsec, dnsmasq et la resynchronisation `conntrackd`
+- la sync de session est validee via l'augmentation du cache externe `conntrackd` sur les backups, et non via la table noyau du noeud passif
+
+Validation minimale :
 ```bash
-apt-get install -y conntrackd
-```
-
-Configuration `/etc/conntrackd/conntrackd.conf` :
-```
-General {
-    HashSize 32768
-    HashLimit 131072
-    LogFile on
-}
-Sync {
-    Mode FTFW { }
-    Multicast {
-        IPv4_address 225.0.0.50
-        IPv4_interface eth_sync
-        Group 3780
-        Interface eth_sync
-    }
-}
+bash ./scripts/test-ha.sh
+docker exec fw-client bash -lc "conntrackd -s | grep -A4 'cache external'"
+docker exec fw-server bash -lc "ipsec statusall | grep -E 'ESTABLISHED|INSTALLED'"
 ```
 
 ---
 
 ### Jour 29 — Tests d'endurance
 
-Scénarios :
-1. **Coupure FW_CLIENT master** : `docker stop fw-client` → mesurer le temps avant que les ping reprennent depuis client1 vers webserver
-2. **Saturation lien WAN** : `iperf3` entre les deux sites, observer les performances VPN
-3. **Failover en plein milieu d'un transfert** : préserver l'intégrité ?
+**Statut depot** : la campagne de bascule automatisee est deja couverte par `scripts/test-ha.sh`, puis revalidee dans `scripts/test-full-lab.sh`.
+
+Scenarios valides aujourd'hui :
+1. **Coupure FW_ISP master** : reprise des VIPs WAN / MGMT, DNS et frontend public sur `fw-isp-2`
+2. **Coupure FW_CLIENT master** : reprise des VIPs LAN / WAN, continuité du tunnel IPsec et du proxy sur `fw-client-2`
+3. **Coupure FW_SERVER master** : reprise des VIPs LAN / WAN, re-etablissement du tunnel IPsec et maintien HTTP / DMZ sur `fw-server-2`
 
 ```bash
-# Préparer iperf3
-docker exec sshserver apt install -y iperf3
-docker exec sshserver iperf3 -s &
-
-# Depuis client1
-docker exec client1 apt install -y iperf3
-docker exec client1 iperf3 -c 192.168.20.11 -t 60
-# Pendant le test : docker stop fw-client
-# Mesurer la coupure
+bash ./scripts/test-ha.sh
+bash ./scripts/test-full-lab.sh
 ```
 
 ---
@@ -512,5 +473,5 @@ Démos live à préparer :
 | Matrice de flux respectée | Script `test-vlan-matrix.sh` 100% OK |
 | ACLs avancees et filtrage web actif | Script `test-policy-hardening.sh` 100% OK |
 | IDS / controle applicatif de base | Script `test-suricata.sh` 100% OK |
-| Cluster HA fonctionnel | Extension non encore livree dans ce depot |
+| Cluster HA fonctionnel | Scripts `test-ha.sh` et `test-full-lab.sh` 100% OK |
 | Logs centralisés | `/var/log/fw/*.log` exploitables |

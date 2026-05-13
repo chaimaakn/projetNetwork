@@ -65,6 +65,28 @@ check_container_shell() {
 	fi
 }
 
+wait_for_container_shell() {
+	local description=$1
+	local container_name=$2
+	local shell_command=$3
+	local max_attempts=${4:-10}
+	local delay_seconds=${5:-2}
+	local attempt=1
+
+	while [ "$attempt" -le "$max_attempts" ]; do
+		if docker exec "$container_name" bash -lc "$shell_command" >/dev/null 2>&1; then
+			ok "$description"
+			return 0
+		fi
+
+		sleep "$delay_seconds"
+		attempt=$((attempt + 1))
+	done
+
+	fail "$description"
+	return 1
+}
+
 echo "=========================================="
 echo "   Tests exhaustifs - LabCyber Docker     "
 echo "=========================================="
@@ -102,22 +124,40 @@ else
 fi
 
 echo ""
+echo "--- Haute disponibilite ---"
+if bash ./scripts/test-ha.sh; then
+	ok "Haute disponibilite"
+else
+	fail "Haute disponibilite"
+fi
+
+echo ""
 echo "--- Etat des services Docker ---"
-for service_name in fw-isp fw-client fw-server client1 client2 voip1 guest1 webserver sshserver dmz-web kali internet-probe uptime-kuma; do
+for service_name in fw-isp fw-isp-2 fw-client fw-client-2 fw-server fw-server-2 client1 client2 voip1 guest1 webserver sshserver dmz-web kali internet-probe uptime-kuma; do
 	check_running_service "$service_name"
 done
 
 echo ""
 echo "--- Daemons principaux ---"
-check_container_shell "fw-client: dnsmasq actif" "fw-client" "pgrep -f 'dnsmasq'"
-check_container_shell "fw-client: squid actif" "fw-client" "pgrep -f 'squid'"
-check_container_shell "fw-client: suricata actif" "fw-client" "pgrep -f 'suricata'"
+check_container_shell "fw-client: dnsmasq actif" "fw-client" "pgrep -x 'dnsmasq'"
+check_container_shell "fw-client: squid actif" "fw-client" "pgrep -x 'squid'"
+wait_for_container_shell "fw-client: suricata actif" "fw-client" "pidof suricata >/dev/null || pgrep -f 'suricata -D' >/dev/null" 10 2
 check_container_shell "fw-client: strongSwan actif" "fw-client" "pgrep -f 'charon|starter'"
-check_container_shell "fw-server: chronyd actif" "fw-server" "pgrep -f 'chronyd'"
+check_container_shell "fw-client: keepalived actif" "fw-client" "pgrep -x 'keepalived'"
+check_container_shell "fw-client: conntrackd actif" "fw-client" "pgrep -x 'conntrackd'"
+check_container_shell "fw-client-2: keepalived actif" "fw-client-2" "pgrep -x 'keepalived'"
+check_container_shell "fw-client-2: conntrackd actif" "fw-client-2" "pgrep -x 'conntrackd'"
+wait_for_container_shell "fw-server: chronyd actif" "fw-server" "pgrep -f 'chronyd'" 15 2
 check_container_shell "fw-server: strongSwan actif" "fw-server" "pgrep -f 'charon|starter'"
+check_container_shell "fw-server: keepalived actif" "fw-server" "pgrep -x 'keepalived'"
+check_container_shell "fw-server: conntrackd actif" "fw-server" "pgrep -x 'conntrackd'"
+check_container_shell "fw-server-2: keepalived actif" "fw-server-2" "pgrep -x 'keepalived'"
+check_container_shell "fw-server-2: conntrackd actif" "fw-server-2" "pgrep -x 'conntrackd'"
 check_container_shell "fw-isp: dnsmasq actif" "fw-isp" "pgrep -f 'dnsmasq'"
-check_container_shell "fw-isp: chronyd actif" "fw-isp" "pgrep -f 'chronyd'"
+wait_for_container_shell "fw-isp: chronyd actif" "fw-isp" "pgrep -f 'chronyd'" 15 2
 check_container_shell "fw-isp: haproxy actif" "fw-isp" "pgrep -f 'haproxy'"
+check_container_shell "fw-isp: keepalived actif" "fw-isp" "pgrep -x 'keepalived'"
+check_container_shell "fw-isp-2: keepalived actif" "fw-isp-2" "pgrep -x 'keepalived'"
 
 echo ""
 echo "--- DNS et routage ---"
@@ -128,7 +168,8 @@ check_container_shell "DNS externe example.com" "client1" "getent hosts example.
 
 echo ""
 echo "--- Chemins applicatifs ---"
-check_container_shell "HTTP interne via VPN" "client1" "curl -fsS http://192.168.20.10 | grep -q 'LabCyber Web Server'"
+docker exec client1 bash -lc "ip neigh flush all >/dev/null 2>&1 || true" >/dev/null 2>&1 || true
+wait_for_container_shell "HTTP interne via VPN" "client1" "curl -fsS http://192.168.20.10 | grep -q 'LabCyber Web Server'" 10 2
 check_container_shell "SSH joignable via VPN" "client1" "nc -z 192.168.20.11 22"
 check_container_shell "HTTP DMZ via VPN" "client1" "curl -fsS http://192.168.50.10 | grep -q 'LabCyber Web Server'"
 check_container_shell "Internet simule -> DMZ HTTP" "internet-probe" "curl -fsS http://192.168.50.10 | grep -q 'LabCyber Web Server'"
@@ -139,7 +180,7 @@ check_command "Uptime Kuma accessible depuis l'hote" curl -fsSI http://127.0.0.1
 echo ""
 echo "--- VPN et temps ---"
 check_container_shell "Tunnel IPsec etabli" "fw-client" "ipsec statusall | grep -Eq 'ESTABLISHED|INSTALLED'"
-check_container_shell "fw-server synchronise son NTP via fw-isp" "fw-server" "chronyc sources -n | grep -Eq '^\^\*\s+(fw-isp|192\\.168\\.99\\.1)'"
+wait_for_container_shell "fw-server synchronise son NTP via fw-isp" "fw-server" "chronyc sources -n | grep -Eq '^\^[\*\+]\s+(fw-isp|192\\.168\\.99\\.1)'" 20 4
 
 echo ""
 echo "=========================================="

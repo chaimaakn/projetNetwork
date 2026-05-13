@@ -38,6 +38,29 @@ ping_check() {
     fi
 }
 
+wait_for_container_shell() {
+    local description=$1
+    local container_name=$2
+    local shell_command=$3
+    local max_attempts=${4:-10}
+    local delay_seconds=${5:-2}
+    local attempt=1
+
+    info "$description"
+    while [ "$attempt" -le "$max_attempts" ]; do
+        if docker exec "$container_name" bash -lc "$shell_command" >/dev/null 2>&1; then
+            ok "$description"
+            return 0
+        fi
+
+        sleep "$delay_seconds"
+        attempt=$((attempt + 1))
+    done
+
+    fail "$description"
+    return 1
+}
+
 wait_for_vpn() {
     local max_attempts=${1:-15}
     local delay_seconds=${2:-2}
@@ -75,19 +98,9 @@ ping_check webserver 192.168.20.1  "webserver -> FW_SERVER (gateway)"
 echo ""
 echo "--- Tests cross-LAN via VPN IPsec ---"
 if wait_for_vpn; then
-    info "HTTP depuis client1 vers webserver (via VPN)"
-    if docker exec client1 curl -fsS http://192.168.20.10 >/dev/null 2>&1; then
-        ok "client1 -> webserver HTTP (via VPN)"
-    else
-        fail "client1 -> webserver HTTP (via VPN)"
-    fi
-
-    info "SSH depuis client1 vers sshserver (via VPN)"
-    if docker exec client1 nc -zw 3 192.168.20.11 22 >/dev/null 2>&1; then
-        ok "client1 -> sshserver SSH (via VPN)"
-    else
-        fail "client1 -> sshserver SSH (via VPN)"
-    fi
+    docker exec client1 bash -lc "ip neigh flush all >/dev/null 2>&1 || true" >/dev/null 2>&1 || true
+    wait_for_container_shell "HTTP depuis client1 vers webserver (via VPN)" "client1" "curl -fsS http://192.168.20.10 >/dev/null" 10 2
+    wait_for_container_shell "SSH depuis client1 vers sshserver (via VPN)" "client1" "nc -zw 3 192.168.20.11 22 >/dev/null" 10 2
 fi
 
 echo ""
