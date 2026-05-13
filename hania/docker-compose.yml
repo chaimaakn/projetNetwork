@@ -575,6 +575,63 @@ services:
       - ./monitoring/log-collector/logs:/var/log/remote
     restart: unless-stopped
 
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: loki
+    hostname: loki
+    command: -config.file=/etc/loki/config.yml
+    networks:
+      mgmt_net:
+        ipv4_address: 192.168.99.70
+    ports:
+      - "3110:3100"
+    volumes:
+      - ./monitoring/siem/loki/config.yml:/etc/loki/config.yml:ro
+      - ./monitoring/siem/loki/rules:/etc/loki/rules:ro
+      - loki-data:/loki
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: promtail
+    hostname: promtail
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+      - log-collector
+    networks:
+      mgmt_net:
+        ipv4_address: 192.168.99.71
+    volumes:
+      - ./monitoring/siem/promtail/config.yml:/etc/promtail/config.yml:ro
+      - ./monitoring/log-collector/logs:/var/log/remote:ro
+      - ./fw-client/logs/suricata:/var/log/lab/fw-client/suricata:ro
+      - ./fw-client-2/logs/suricata:/var/log/lab/fw-client-2/suricata:ro
+      - promtail-positions:/tmp
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.6
+    container_name: grafana
+    hostname: grafana
+    depends_on:
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: labcyber-admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3002
+    networks:
+      mgmt_net:
+        ipv4_address: 192.168.99.72
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./monitoring/siem/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/siem/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+
 ###############################################################################
 # RÉSEAUX DOCKER (équivalent des sous-réseaux du lab)
 ###############################################################################
@@ -653,3 +710,6 @@ networks:
 
 volumes:
   uptime-kuma-data:
+  loki-data:
+  promtail-positions:
+  grafana-data:

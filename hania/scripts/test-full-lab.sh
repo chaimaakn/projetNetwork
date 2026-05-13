@@ -148,8 +148,16 @@ else
 fi
 
 echo ""
+echo "--- SOC / SIEM Phase 4 ---"
+if bash ./scripts/test-siem-phase4.sh; then
+	ok "SOC / SIEM Phase 4"
+else
+	fail "SOC / SIEM Phase 4"
+fi
+
+echo ""
 echo "--- Etat des services Docker ---"
-for service_name in fw-isp fw-isp-2 fw-client fw-client-2 fw-server fw-server-2 client1 client2 voip1 guest1 webserver sshserver dmz-web kali internet-probe uptime-kuma log-collector; do
+for service_name in fw-isp fw-isp-2 fw-client fw-client-2 fw-server fw-server-2 client1 client2 voip1 guest1 webserver sshserver dmz-web kali internet-probe uptime-kuma log-collector loki promtail grafana; do
 	check_running_service "$service_name"
 done
 
@@ -193,6 +201,8 @@ check_container_shell "Internet simule -> DMZ HTTP" "internet-probe" "curl -fsS 
 check_container_shell "Frontend public HAProxy" "fw-isp" "curl -fsS http://200.0.0.10 | grep -q 'LabCyber Web Server'"
 check_container_shell "Proxy Squid utilisable depuis client1" "client1" "curl -fsSI -x http://192.168.10.1:3128 http://example.com >/dev/null"
 check_command "Uptime Kuma accessible depuis l'hote" curl -fsSI http://127.0.0.1:3001
+check_command "Grafana SIEM accessible depuis l'hote" curl -fsS -u admin:labcyber-admin http://127.0.0.1:3002/api/health
+check_command "Loki API accessible depuis l'hote" curl -fsS http://127.0.0.1:3110/ready
 
 echo ""
 echo "--- VPN et temps ---"

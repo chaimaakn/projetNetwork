@@ -1,0 +1,314 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({job=\"lab-remote-logs\", filename=~\".*/[^/]+/Keepalived\\\\.log\"} |= \"Transition to MASTER STATE\" [1h]))",
+          "instant": true,
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "HA transitions (1h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "blue",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({job=\"lab-remote-logs\", filename=~\".*/[^/]+/charon\\\\.log\"} [1h]))",
+          "instant": true,
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "IPsec log events (1h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({job=\"lab-remote-logs\", filename=~\".*/[^/]+/kernel\\\\.log\"} |= \"DROP\" [1h]))",
+          "instant": true,
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "Kernel drops (1h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "id": 4,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": true,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "{job=\"lab-remote-logs\", filename=~\".*/[^/]+/Keepalived\\\\.log\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Keepalived transitions",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "id": 5,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": true,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "{job=\"lab-remote-logs\", filename=~\".*/[^/]+/charon\\\\.log\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "IPsec charon events",
+      "type": "logs"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "labcyber",
+    "ha",
+    "vpn"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "LabCyber HA & VPN",
+  "uid": "labcyber-ha-vpn",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,36 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: lab-remote-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: lab-remote-logs
+          source: rsyslog
+          __path__: /var/log/remote/*/*.log
+
+  - job_name: suricata-fast
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: suricata-fast
+          source: suricata
+          firewall: fw-client
+          __path__: /var/log/lab/fw-client/suricata/fast.log
+      - targets:
+          - localhost
+        labels:
+          job: suricata-fast
+          source: suricata
+          firewall: fw-client-2
+          __path__: /var/log/lab/fw-client-2/suricata/fast.log

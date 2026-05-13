@@ -4,7 +4,7 @@
 
 ## 🎯 Objectif de cette adaptation
 
-Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, Suricata en IDS, le monitoring, le hardening avance de Phase 2, la haute disponibilité keepalived / conntrackd, la remédiation SSH Phase 3 et la centralisation de logs Phase 4.
+Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, Suricata en IDS, le monitoring, le hardening avance de Phase 2, la haute disponibilité keepalived / conntrackd, la remédiation SSH Phase 3 et la Phase 4 complète en mode SOC / SIEM léger.
 
 | Composant original | Remplacement Docker | Fonction |
 |---|---|---|
@@ -18,7 +18,7 @@ Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + 
 
 ## ✅ Statut validé aujourd'hui
 
-- Fonctionnel et vérifié : `fw-isp`, `fw-client`, `fw-server`, `client1`, `client2`, `voip1`, `guest1`, `kali`, `webserver`, `sshserver`, `dmz-web`, `internet-probe`, `uptime-kuma`
+- Fonctionnel et vérifié : `fw-isp`, `fw-client`, `fw-server`, `client1`, `client2`, `voip1`, `guest1`, `kali`, `webserver`, `sshserver`, `dmz-web`, `internet-probe`, `uptime-kuma`, `log-collector`, `loki`, `promtail`, `grafana`
 - Vérifié : routage entre zones, NAT Internet, DNS/NTP, IPsec, HTTP via VPN, SSH vers `sshserver`, HTTP DMZ, publication web via HAProxy, proxy Squid, monitoring et tests automatisés
 - Les scripts actifs résolvent les interfaces dynamiquement a partir des IPs statiques du compose ; l'ordre `ethX` n'est plus une hypothèse de fonctionnement
 - La segmentation Phase 2 coeur est integree : VLAN VOIP, VLAN GUEST, DMZ et matrice de flux testee
@@ -26,10 +26,10 @@ Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + 
 - La brique IDS Phase 2 est livree : `Suricata` tourne sur `fw-client`, journalise dans `fw-client/logs/suricata/` et valide des alertes de laboratoire versionnees
 - La brique HA Phase 2 est livree : `keepalived` maintient les VIPs historiques et `conntrackd` replique les etats des deux paires FortiGate-like
 - La remédiation Phase 3 par défaut est livree : `sshserver` n'accepte plus ni root login ni password auth, `fail2ban` est actif et SSH est retiré des serveurs web
-- La brique Phase 4 livree est volontairement legere : `log-collector` centralise les journaux rsyslog des firewalls et de `sshserver` sur `mgmt_net`
-- Le jeu de validation couvre maintenant `test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh`, `test-ha.sh`, `test-phase3-hardening.sh`, `test-log-centralization.sh` et `test-full-lab.sh`
-- Les documents `PHASE2.md` et `PHASE3.md` servent maintenant de support pour les extensions suivantes et la campagne de validation offensive
-- Evolutions possibles : `Wazuh`, l'inspection TLS dediee et les blocs SIEM / SOC avances au-dessus du collecteur central
+- La brique Phase 4 livree combine `log-collector`, `Loki`, `Promtail` et `Grafana` pour centraliser les journaux, exposer un backend SIEM léger, charger des règles de détection et provisionner des dashboards SOC / HA
+- Le jeu de validation couvre maintenant `test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh`, `test-ha.sh`, `test-phase3-hardening.sh`, `test-log-centralization.sh`, `test-siem-phase4.sh` et `test-full-lab.sh`
+- Les documents `PHASE2.md`, `PHASE3.md`, `PHASE4.md` et `SOUTENANCE.md` servent de support pour l'exploitation, la restitution et la démo finale
+- Evolutions possibles : `Wazuh`, l'inspection TLS dediee, les notifications externes et une retention longue duree au-dessus du pipeline SIEM livre
 
 ## 🗺️ Architecture déployée
 
@@ -105,6 +105,7 @@ chmod +x scripts/test-suricata.sh
 chmod +x scripts/test-ha.sh
 chmod +x scripts/test-phase3-hardening.sh
 chmod +x scripts/test-log-centralization.sh
+chmod +x scripts/test-siem-phase4.sh
 chmod +x scripts/test-full-lab.sh
 
 # Smoke test
@@ -127,6 +128,9 @@ bash ./scripts/test-phase3-hardening.sh
 
 # Validation centralisation Phase 4
 bash ./scripts/test-log-centralization.sh
+
+# Validation SOC / SIEM Phase 4
+bash ./scripts/test-siem-phase4.sh
 
 # Validation complete
 bash ./scripts/test-full-lab.sh
@@ -156,6 +160,11 @@ docker compose logs -f fw-client
 - Ouvrir : http://localhost:3001
 - Créer un compte au premier accès
 
+### Interface Grafana SOC / SIEM
+- Ouvrir : http://localhost:3002
+- Identifiants par défaut du lab : `admin` / `labcyber-admin`
+- Dashboards livrés : `LabCyber SOC Overview`, `LabCyber HA & VPN`
+
 ## 📚 Documentation des Phases
 
 | Document | Description |
@@ -163,15 +172,17 @@ docker compose logs -f fw-client
 | [`docs/PHASE1.md`](docs/PHASE1.md) | Jours 1-15 — Consolidation, audit et validation du socle actuel |
 | [`docs/PHASE2.md`](docs/PHASE2.md) | Jours 16-30 — Extensions VLAN, ACLs avancées, filtrage web, HA |
 | [`docs/PHASE3.md`](docs/PHASE3.md) | Jours 31-45 — Campagne de pentest et remédiation |
-| [`docs/PHASE4.md`](docs/PHASE4.md) | Suite — Centralisation des logs, observabilité et base SOC légère |
+| [`docs/PHASE4.md`](docs/PHASE4.md) | Suite — Centralisation des logs, SIEM léger, règles d'alerte et dashboards |
+| [`docs/SOUTENANCE.md`](docs/SOUTENANCE.md) | Trame de démonstration finale, preuves à montrer et checklist jury |
 | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Dépannage des problèmes courants |
 | [`docs/EQUIVALENCES.md`](docs/EQUIVALENCES.md) | Tableau de correspondance pfSense/FortiGate ↔ Docker |
 
 ## 🔐 Notes de sécurité importantes
 
-1. **Ce lab est volontairement vulnérable** sur certains points (mots de passe SSH faibles, services exposés) pour permettre la Phase 3 (pentest). **Ne jamais exposer ces conteneurs sur Internet**.
+1. **Le dépôt livré est désormais durci par défaut** pour la brique SSH. Les scénarios offensifs Phase 3 restent documentés, mais les replays "avant correctif" doivent être effectués de manière contrôlée. **Ne jamais exposer ces conteneurs sur Internet**.
 2. Les conteneurs firewall tournent en `privileged: true` à cause des contraintes IPsec/iptables. C'est acceptable en lab mais **inacceptable en production**.
 3. Le PSK IPsec présent dans le code doit être changé avant tout usage non-pédagogique.
+4. Le mot de passe Grafana versionné (`admin` / `labcyber-admin`) est un secret de lab. Il doit être remplacé si le projet est réutilisé hors contexte pédagogique.
 
 ## 🧹 Arrêt et nettoyage
 
@@ -194,7 +205,7 @@ docker compose down -v --rmi all
 | **HA FortiGate** | Cluster complet | `keepalived` + `conntrackd` sur `fw-client*` et `fw-server*` | Bascule et sync L3/L4 valides, mais pas de FGCP complet |
 | **Inspection SSL/TLS profonde** | FortiGate native | Extension optionnelle | Squid SslBump demanderait une integration dediee |
 | **Inspection paquet niveau ASIC** | FortiGate | Logiciel uniquement | Un IDS type Suricata peut enrichir le socle |
-| **SIEM / corrélation** | Plateforme dédiée | Collecteur rsyslog léger + extension optionnelle | La collecte centrale est livrée, `Wazuh` reste la grande brique naturelle pour aller plus loin |
+| **SIEM / corrélation** | Plateforme dédiée | `log-collector` + `Loki` + `Promtail` + `Grafana` | SIEM léger livré, `Wazuh` reste la grande brique naturelle pour aller plus loin |
 | **Interface graphique** | GUI native | CLI + Uptime Kuma | Pédagogique différent mais formateur |
 
 ---

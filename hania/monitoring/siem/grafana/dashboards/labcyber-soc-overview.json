@@ -1,0 +1,378 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({job=\"lab-remote-logs\", filename=~\".*/sshserver/sshd\\\\.log\"} |= \"Failed\" [15m]))",
+          "instant": true,
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "SSH auth failures (15m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({job=\"lab-remote-logs\", filename=~\".*/[^/]+/kernel\\\\.log\"} |= \"DROP\" [15m]))",
+          "instant": true,
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "Firewall drops (15m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({job=\"suricata-fast\"} [15m]))",
+          "instant": true,
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "Suricata alerts (15m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({job=\"lab-remote-logs\", filename=~\".*/[^/]+/Keepalived\\\\.log\"} |= \"Transition to MASTER STATE\" [24h]))",
+          "instant": true,
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "HA master transitions (24h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "id": 5,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "{job=\"lab-remote-logs\", filename=~\".*/sshserver/sshd\\\\.log\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent SSH security events",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "labcyber-loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "id": 6,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": true,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "pluginVersion": "10.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "labcyber-loki"
+          },
+          "editorMode": "code",
+          "expr": "{job=\"suricata-fast\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent IDS alerts",
+      "type": "logs"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "labcyber",
+    "soc",
+    "siem"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "LabCyber SOC Overview",
+  "uid": "labcyber-soc-overview",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,46 @@
+groups:
+  - name: ssh-security
+    rules:
+      - alert: SSHAuthenticationFailuresBurst
+        expr: sum(count_over_time({job="lab-remote-logs", filename=~".*/sshserver/sshd\\.log"} |= "Failed" [5m])) > 0
+        for: 1m
+        labels:
+          severity: high
+          domain: access
+        annotations:
+          summary: "Echec(s) d'authentification SSH detecte(s)"
+          description: "Le SIEM a observe des echecs d'authentification SSH sur sshserver durant les 5 dernieres minutes."
+
+  - name: network-ha-security
+    rules:
+      - alert: KeepalivedMasterTransitionObserved
+        expr: sum(count_over_time({job="lab-remote-logs", filename=~".*/[^/]+/Keepalived\\.log"} |= "Transition to MASTER STATE" [15m])) > 0
+        for: 30s
+        labels:
+          severity: medium
+          domain: high-availability
+        annotations:
+          summary: "Bascule keepalived observee"
+          description: "Un evenement keepalived indiquant un passage MASTER a ete observe dans les journaux centralises."
+
+      - alert: FirewallKernelDropsObserved
+        expr: sum(count_over_time({job="lab-remote-logs", filename=~".*/[^/]+/kernel\\.log"} |= "DROP" [10m])) > 0
+        for: 1m
+        labels:
+          severity: medium
+          domain: firewall
+        annotations:
+          summary: "Drops noyau detectes"
+          description: "Le SIEM a observe des paquets rejetes par les pare-feux centralises."
+
+  - name: ids-lab
+    rules:
+      - alert: SuricataLabAlertObserved
+        expr: sum by (firewall) (count_over_time({job="suricata-fast"} |= "LAB Suricata" [10m])) > 0
+        for: 30s
+        labels:
+          severity: high
+          domain: ids
+        annotations:
+          summary: "Alerte IDS Suricata detectee sur {{ $labels.firewall }}"
+          description: "Une alerte Suricata de laboratoire a ete observee sur {{ $labels.firewall }}."

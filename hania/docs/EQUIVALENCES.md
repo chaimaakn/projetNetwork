@@ -2,7 +2,7 @@
 
 > Pour rédiger les rapports de soutenance et faire le lien avec la formation théorique.
 
-> **Lecture recommandée** : ce tableau couvre a la fois le socle deja valide (`iptables`, `dnsmasq`, `chrony`, `haproxy`, `strongSwan`, `squid`, `rsyslog`) et les briques d'extension envisageables ensuite (`keepalived`, `conntrackd`, `suricata`, `ClamAV`, `Wazuh/ELK`).
+> **Lecture recommandée** : ce tableau couvre a la fois le socle deja valide (`iptables`, `dnsmasq`, `chrony`, `haproxy`, `strongSwan`, `squid`, `rsyslog`, `keepalived`, `conntrackd`, `suricata`, `loki`, `promtail`, `grafana`) et les briques d'extension envisageables ensuite (`ClamAV`, `Wazuh/ELK`).
 
 ## pfSense → fw-isp (Docker)
 
@@ -16,7 +16,7 @@
 | NTP Server | Services > NTP | `chronyd` (`/etc/chrony/chrony.conf`) |
 | HAProxy | Services > HAProxy | `haproxy` (`/etc/haproxy/haproxy.cfg`) |
 | Multi-WAN / Gateway groups | System > Routing > Gateway Groups | `iproute2` ip rule + ip route policy |
-| CARP / VRRP HA | Firewall > Virtual IPs | `keepalived` (à ajouter en Phase 2) |
+| CARP / VRRP HA | Firewall > Virtual IPs | `keepalived` (livré) |
 | Logs | Status > System Logs | `/var/log/fw/*` + rsyslog |
 | User Manager | System > User Manager | Comptes Unix `/etc/passwd` |
 | Aliases | Firewall > Aliases | `ipset` |
@@ -40,8 +40,8 @@
 | IPS | Security Profiles > IPS | `suricata` avec règles ET/Pro (roadmap) |
 | SSL Inspection | Security Profiles > SSL/SSH Inspection | `squid` SslBump (complexe) |
 | Antivirus | Security Profiles > AntiVirus | ClamAV + e2guardian (roadmap) |
-| Logging | Log & Report | rsyslog → fichier ou SIEM (Phase 4 / roadmap) |
-| HA Active-Passive | System > HA | `keepalived` + `conntrackd` (roadmap) |
+| Logging | Log & Report | rsyslog → `log-collector` → `Loki/Grafana` |
+| HA Active-Passive | System > HA | `keepalived` + `conntrackd` (livré) |
 | SD-WAN | Network > SD-WAN | `iproute2` policy routing + scripting |
 | FortiGuard | System > FortiGuard | N/A (services payants Fortinet) |
 
@@ -75,9 +75,9 @@
 | **DPD** | `dpdaction=restart` | Identique |
 | **Web Filter URL category** | squid `dstdomain` ACL | Pédagogique : montre la mécanique |
 | **Application Control** | Suricata + signatures (roadmap) | Plus formateur (on voit les règles) |
-| **HA Active/Passive** | keepalived + conntrackd (roadmap) | VRRP au lieu de FGCP propriétaire |
+| **HA Active/Passive** | keepalived + conntrackd (livré) | VRRP au lieu de FGCP propriétaire |
 | **Multi-WAN failover** | iproute2 + nfqueue scripting | Concept identique, syntaxe différente |
-| **Logging centralisé** | rsyslog → Wazuh/ELK (roadmap) | Phase 4 |
+| **Logging centralisé** | rsyslog → log-collector → Loki/Grafana | Phase 4 livrée |
 
 ## Limites de l'analogie
 

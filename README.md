@@ -17,14 +17,14 @@ Le périmètre opérationnel dans `hania/` couvre :
 - durcissement avancé Phase 2 : liste de domaines Squid versionnée et garde-fous egress sur `fw-isp`
 - haute disponibilité Phase 2 : paire pfSense-like `fw-isp` / `fw-isp-2` avec `keepalived`, paires FortiGate-like `fw-client` / `fw-client-2` et `fw-server` / `fw-server-2` avec `keepalived` + `conntrackd`
 - remédiation Phase 3 : `sshserver` durci (root login et password auth désactivés, `fail2ban` actif) et suppression de SSH sur `webserver` / `dmz-web`
-- observabilité Phase 4 : collecteur central `log-collector` et remontée rsyslog depuis les firewalls et `sshserver`
-- monitoring léger avec Uptime Kuma
-- poste d'attaque Kali et scripts de validation (`test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh`, `test-ha.sh`, `test-phase3-hardening.sh`, `test-log-centralization.sh`, `test-full-lab.sh`)
+- observabilité / SOC Phase 4 : collecteur central `log-collector`, pipeline `Loki + Promtail + Grafana`, règles de détection versionnées et dashboards SOC/HA
+- monitoring avec Uptime Kuma et dashboards Grafana
+- poste d'attaque Kali et scripts de validation (`test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh`, `test-ha.sh`, `test-phase3-hardening.sh`, `test-log-centralization.sh`, `test-siem-phase4.sh`, `test-full-lab.sh`)
 
 Extensions possibles à partir de ce socle :
 
-- SOC / SIEM `Wazuh`
-- corrélation avancée / alerting sur le collecteur central
+- SOC avancé `Wazuh` ou `ELK/OpenSearch` au-dessus du pipeline déjà livré
+- notifications externes, rétention longue durée et corrélation enrichie
 
 ## Démarrage rapide
 
@@ -56,6 +56,9 @@ bash ./scripts/test-phase3-hardening.sh
 # Validation centralisation des logs Phase 4
 bash ./scripts/test-log-centralization.sh
 
+# Validation SOC / SIEM Phase 4
+bash ./scripts/test-siem-phase4.sh
+
 # Validation complete
 bash ./scripts/test-full-lab.sh
 ```
@@ -70,6 +73,7 @@ bash ./scripts/test-suricata.sh
 bash ./scripts/test-ha.sh
 bash ./scripts/test-phase3-hardening.sh
 bash ./scripts/test-log-centralization.sh
+bash ./scripts/test-siem-phase4.sh
 bash ./scripts/test-full-lab.sh
 docker exec fw-client ipsec statusall
 docker exec client1 curl -s http://192.168.20.10
@@ -82,7 +86,7 @@ docker exec client1 nc -zv 192.168.20.11 22
 - vue d'ensemble : `hania/docs/README.md`
 - dépannage : `hania/docs/TROUBLESHOOTING.md`
 - équivalences pédagogiques : `hania/docs/EQUIVALENCES.md`
-- roadmaps / supports : `hania/docs/PHASE1.md`, `hania/docs/PHASE2.md`, `hania/docs/PHASE3.md`, `hania/docs/PHASE4.md`
+- roadmaps / supports : `hania/docs/PHASE1.md`, `hania/docs/PHASE2.md`, `hania/docs/PHASE3.md`, `hania/docs/PHASE4.md`, `hania/docs/SOUTENANCE.md`
 
 ## Environnement conseillé
 
