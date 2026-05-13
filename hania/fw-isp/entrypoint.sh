@@ -32,6 +32,9 @@ CLIENT_WAN_VIP=${CLIENT_WAN_VIP:-10.10.0.2}
 SERVER_WAN_VIP=${SERVER_WAN_VIP:-10.20.0.2}
 CLIENT_MGMT_VIP=${CLIENT_MGMT_VIP:-192.168.99.10}
 SERVER_MGMT_VIP=${SERVER_MGMT_VIP:-192.168.99.20}
+REMOTE_SYSLOG_HOST=${REMOTE_SYSLOG_HOST:-}
+REMOTE_SYSLOG_PORT=${REMOTE_SYSLOG_PORT:-514}
+REMOTE_SYSLOG_PROTOCOL=${REMOTE_SYSLOG_PROTOCOL:-tcp}
 
 mkdir -p /var/log/fw /var/log/chrony
 install -d -o _chrony -g _chrony -m 750 /run/chrony
@@ -97,6 +100,7 @@ replace_static_route 192.168.50.0/24 "$SERVER_WAN_VIP"
 
 /usr/local/bin/rules.sh | tee -a "$LOG"
 
+configure_remote_syslog "$REMOTE_SYSLOG_HOST" "$REMOTE_SYSLOG_PORT" "$REMOTE_SYSLOG_PROTOCOL"
 rsyslogd || true
 
 echo "[$(date)] Démarrage de chrony (NTP)..." | tee -a "$LOG"

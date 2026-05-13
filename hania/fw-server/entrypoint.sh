@@ -34,6 +34,9 @@ PEER_VPN_WAN_IP=${PEER_VPN_WAN_IP:-10.10.0.2}
 
 CONNTRACKD_LOCAL_IP=${CONNTRACKD_LOCAL_IP:-$NODE_MGMT_IP}
 CONNTRACKD_PEER_IP=${CONNTRACKD_PEER_IP:-$PEER_MGMT_NODE_IP}
+REMOTE_SYSLOG_HOST=${REMOTE_SYSLOG_HOST:-}
+REMOTE_SYSLOG_PORT=${REMOTE_SYSLOG_PORT:-514}
+REMOTE_SYSLOG_PROTOCOL=${REMOTE_SYSLOG_PROTOCOL:-tcp}
 
 mkdir -p /var/log/fw /var/log/chrony
 install -d -o _chrony -g _chrony -m 750 /run/chrony
@@ -100,6 +103,7 @@ fi
 
 /usr/local/bin/rules.sh | tee -a "$LOG"
 
+configure_remote_syslog "$REMOTE_SYSLOG_HOST" "$REMOTE_SYSLOG_PORT" "$REMOTE_SYSLOG_PROTOCOL"
 rsyslogd || true
 
 echo "[$(date)] Démarrage chrony (NTP serveur)..." | tee -a "$LOG"

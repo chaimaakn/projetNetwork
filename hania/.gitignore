@@ -7,3 +7,4 @@ fw-isp-2/logs/*.log
 fw-server/logs/*.log
 fw-server-2/logs/*.log
 fw-server-2/logs/suricata/*
+monitoring/log-collector/logs/*

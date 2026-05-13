@@ -37,6 +37,9 @@ PEER_VPN_WAN_IP=${PEER_VPN_WAN_IP:-10.20.0.2}
 
 CONNTRACKD_LOCAL_IP=${CONNTRACKD_LOCAL_IP:-$NODE_MGMT_IP}
 CONNTRACKD_PEER_IP=${CONNTRACKD_PEER_IP:-$PEER_MGMT_NODE_IP}
+REMOTE_SYSLOG_HOST=${REMOTE_SYSLOG_HOST:-}
+REMOTE_SYSLOG_PORT=${REMOTE_SYSLOG_PORT:-514}
+REMOTE_SYSLOG_PROTOCOL=${REMOTE_SYSLOG_PROTOCOL:-tcp}
 
 mkdir -p /var/log/fw /var/log/fw/suricata
 touch /var/log/fw/ha-state.log
@@ -109,6 +112,7 @@ fi
 
 /usr/local/bin/rules.sh | tee -a "$LOG"
 
+configure_remote_syslog "$REMOTE_SYSLOG_HOST" "$REMOTE_SYSLOG_PORT" "$REMOTE_SYSLOG_PROTOCOL"
 rsyslogd || true
 
 echo "[$(date)] Preparation de dnsmasq (DHCP LAN_CLIENT)..." | tee -a "$LOG"

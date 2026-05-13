@@ -1,0 +1,65 @@
+name: lab-regression
+
+on:
+  push:
+    paths:
+      - '.github/workflows/lab-regression.yml'
+      - 'hania/**'
+  pull_request:
+    paths:
+      - '.github/workflows/lab-regression.yml'
+      - 'hania/**'
+  workflow_dispatch:
+
+jobs:
+  full-lab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: hania
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show Docker versions
+        run: |
+          docker version
+          docker compose version
+
+      - name: Build lab images
+        run: docker compose build
+
+      - name: Start lab
+        run: docker compose up -d
+
+      - name: Run full regression
+        run: bash ./scripts/test-full-lab.sh
+
+      - name: Collect compose state
+        if: always()
+        run: |
+          docker compose ps
+          docker compose logs --no-color > "$GITHUB_WORKSPACE/compose.log"
+
+      - name: Upload lab logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-logs
+          path: |
+            compose.log
+            hania/fw-isp/logs
+            hania/fw-isp-2/logs
+            hania/fw-client/logs
+            hania/fw-client-2/logs
+            hania/fw-server/logs
+            hania/fw-server-2/logs
+            hania/monitoring/log-collector/logs
+
+      - name: Tear down lab
+        if: always()
+        run: docker compose down -v

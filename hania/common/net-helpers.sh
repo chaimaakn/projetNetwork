@@ -85,3 +85,27 @@ configure_resolver() {
 		fi
 	} > /etc/resolv.conf
 }
+
+configure_remote_syslog() {
+	local target_host=$1
+	local target_port=${2:-514}
+	local protocol=${3:-tcp}
+	local config_path=/etc/rsyslog.d/90-remote-log-collector.conf
+
+	if [ -z "$target_host" ]; then
+		rm -f "$config_path"
+		return 0
+	fi
+
+	cat > "$config_path" <<EOF
+*.* action(
+    type="omfwd"
+    target="${target_host}"
+    port="${target_port}"
+    protocol="${protocol}"
+    action.resumeRetryCount="-1"
+    queue.type="linkedList"
+    queue.filename="remote_log_collector"
+)
+EOF
+}

@@ -132,8 +132,24 @@ else
 fi
 
 echo ""
+echo "--- Hardening Phase 3 ---"
+if bash ./scripts/test-phase3-hardening.sh; then
+	ok "Hardening Phase 3"
+else
+	fail "Hardening Phase 3"
+fi
+
+echo ""
+echo "--- Centralisation des logs Phase 4 ---"
+if bash ./scripts/test-log-centralization.sh; then
+	ok "Centralisation des logs Phase 4"
+else
+	fail "Centralisation des logs Phase 4"
+fi
+
+echo ""
 echo "--- Etat des services Docker ---"
-for service_name in fw-isp fw-isp-2 fw-client fw-client-2 fw-server fw-server-2 client1 client2 voip1 guest1 webserver sshserver dmz-web kali internet-probe uptime-kuma; do
+for service_name in fw-isp fw-isp-2 fw-client fw-client-2 fw-server fw-server-2 client1 client2 voip1 guest1 webserver sshserver dmz-web kali internet-probe uptime-kuma log-collector; do
 	check_running_service "$service_name"
 done
 
@@ -158,6 +174,7 @@ wait_for_container_shell "fw-isp: chronyd actif" "fw-isp" "pgrep -f 'chronyd'" 1
 check_container_shell "fw-isp: haproxy actif" "fw-isp" "pgrep -f 'haproxy'"
 check_container_shell "fw-isp: keepalived actif" "fw-isp" "pgrep -x 'keepalived'"
 check_container_shell "fw-isp-2: keepalived actif" "fw-isp-2" "pgrep -x 'keepalived'"
+check_container_shell "log-collector: rsyslog actif" "log-collector" "pgrep -x 'rsyslogd'"
 
 echo ""
 echo "--- DNS et routage ---"

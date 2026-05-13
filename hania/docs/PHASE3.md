@@ -4,6 +4,8 @@
 
 > **Positionnement** : ce document sert de guide de campagne a partir d'un socle reseau deja valide. Il structure les scenarios de test offensif et les actions de remediation a mener autour du lab en service.
 
+> **Etat du depot** : le compose livre par defaut est maintenant en mode remédie pour la brique SSH de `sshserver` : `PermitRootLogin no`, `PasswordAuthentication no`, `fail2ban` actif et SSH retire de `webserver` / `dmz-web`. Les scenarios d'exploitation historiques restent utiles pedagogiquement, mais demandent des variantes de replay controlees si vous voulez rejouer le "avant correctif".
+
 ## ⚠️ Cadre légal
 
 🛡 **Toutes les attaques sont menées exclusivement sur le lab Docker isolé.**  
@@ -200,7 +202,7 @@ run
 ### Jour 37 — Brute-force des credentials
 
 ```bash
-# === Hydra contre SSHServer (vulnérabilité volontaire) ===
+# === Hydra contre SSHServer (scénario historique avant remédiation) ===
 
 # Créer wordlists
 cat > /tmp/users.txt <<EOF
@@ -227,8 +229,9 @@ EOF
 # Lancer le brute-force
 hydra -L /tmp/users.txt -P /tmp/passwords.txt -t 4 -V -f ssh://192.168.20.11
 
-# Résultat attendu :
+# Résultat attendu dans l'etat historique non corrige :
 # [22][ssh] host: 192.168.20.11   login: admin   password: admin123
+# Avec le compose livre aujourd'hui, cette attaque doit echouer.
 ```
 
 🎯 **Vulnérabilité confirmée** : compte admin avec mot de passe trivial.
@@ -381,6 +384,8 @@ Priorisation matrix :
 
 ### Jour 42-43 — Application des correctifs
 
+**Statut depot** : cette tranche est deja appliquee pour la cible `sshserver` dans le compose courant. Les exemples ci-dessous servent de traçabilité pedagogique du correctif et de base pour un replay controle si vous voulez montrer l'avant / apres.
+
 #### Correctif VULN-001 et VULN-002 : SSH
 
 ```bash
@@ -515,7 +520,7 @@ Plan :
 |---|---|
 | Recon complète | Tableau hôtes/ports/services |
 | ≥ 10 vulnérabilités identifiées | Rapport documenté |
-| Exploitation démontrée | Preuve brute-force SSH réussi |
+| Exploitation démontrée | Preuve historique ou replay controle avant remédiation |
 | Plan de remédiation | Tableau priorisé |
-| Correctifs appliqués | Retesting confirme l'efficacité |
+| Correctifs appliqués | `test-phase3-hardening.sh` + retesting confirment l'efficacité |
 | Rapport pro PDF | 20-30 pages, format pro |

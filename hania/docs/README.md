@@ -4,7 +4,7 @@
 
 ## 🎯 Objectif de cette adaptation
 
-Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, Suricata en IDS, le monitoring, le hardening avance de Phase 2, la haute disponibilité keepalived / conntrackd et la base des démonstrations de pentest.
+Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + Kali, mais en utilisant uniquement **Docker** et des conteneurs Linux légers. Le périmètre validé couvre la segmentation réseau, le routage, le NAT, le DNS/NTP, le VPN IPsec, le DHCP, le proxy Squid, HAProxy, Suricata en IDS, le monitoring, le hardening avance de Phase 2, la haute disponibilité keepalived / conntrackd, la remédiation SSH Phase 3 et la centralisation de logs Phase 4.
 
 | Composant original | Remplacement Docker | Fonction |
 |---|---|---|
@@ -25,9 +25,11 @@ Reproduire le **socle pédagogique principal** du lab pfSense + 2× FortiGate + 
 - Le hardening avance Phase 2 est livre : objets et groupes `ipset` sur `fw-client`, liste `blocked_domains.txt` versionnee pour Squid, garde-fous egress sur `fw-isp`
 - La brique IDS Phase 2 est livree : `Suricata` tourne sur `fw-client`, journalise dans `fw-client/logs/suricata/` et valide des alertes de laboratoire versionnees
 - La brique HA Phase 2 est livree : `keepalived` maintient les VIPs historiques et `conntrackd` replique les etats des deux paires FortiGate-like
-- Le jeu de validation couvre maintenant `test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh`, `test-ha.sh` et `test-full-lab.sh`
+- La remédiation Phase 3 par défaut est livree : `sshserver` n'accepte plus ni root login ni password auth, `fail2ban` est actif et SSH est retiré des serveurs web
+- La brique Phase 4 livree est volontairement legere : `log-collector` centralise les journaux rsyslog des firewalls et de `sshserver` sur `mgmt_net`
+- Le jeu de validation couvre maintenant `test-connectivity.sh`, `test-vlan-matrix.sh`, `test-policy-hardening.sh`, `test-suricata.sh`, `test-ha.sh`, `test-phase3-hardening.sh`, `test-log-centralization.sh` et `test-full-lab.sh`
 - Les documents `PHASE2.md` et `PHASE3.md` servent maintenant de support pour les extensions suivantes et la campagne de validation offensive
-- Evolutions possibles : `Wazuh`, l'inspection TLS dediee et les blocs SIEM / SOC restants de la roadmap
+- Evolutions possibles : `Wazuh`, l'inspection TLS dediee et les blocs SIEM / SOC avances au-dessus du collecteur central
 
 ## 🗺️ Architecture déployée
 
@@ -101,6 +103,8 @@ chmod +x scripts/test-vlan-matrix.sh
 chmod +x scripts/test-policy-hardening.sh
 chmod +x scripts/test-suricata.sh
 chmod +x scripts/test-ha.sh
+chmod +x scripts/test-phase3-hardening.sh
+chmod +x scripts/test-log-centralization.sh
 chmod +x scripts/test-full-lab.sh
 
 # Smoke test
@@ -117,6 +121,12 @@ bash ./scripts/test-suricata.sh
 
 # Validation HA
 bash ./scripts/test-ha.sh
+
+# Validation hardening Phase 3
+bash ./scripts/test-phase3-hardening.sh
+
+# Validation centralisation Phase 4
+bash ./scripts/test-log-centralization.sh
 
 # Validation complete
 bash ./scripts/test-full-lab.sh
@@ -153,6 +163,7 @@ docker compose logs -f fw-client
 | [`docs/PHASE1.md`](docs/PHASE1.md) | Jours 1-15 — Consolidation, audit et validation du socle actuel |
 | [`docs/PHASE2.md`](docs/PHASE2.md) | Jours 16-30 — Extensions VLAN, ACLs avancées, filtrage web, HA |
 | [`docs/PHASE3.md`](docs/PHASE3.md) | Jours 31-45 — Campagne de pentest et remédiation |
+| [`docs/PHASE4.md`](docs/PHASE4.md) | Suite — Centralisation des logs, observabilité et base SOC légère |
 | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Dépannage des problèmes courants |
 | [`docs/EQUIVALENCES.md`](docs/EQUIVALENCES.md) | Tableau de correspondance pfSense/FortiGate ↔ Docker |
 
@@ -183,7 +194,7 @@ docker compose down -v --rmi all
 | **HA FortiGate** | Cluster complet | `keepalived` + `conntrackd` sur `fw-client*` et `fw-server*` | Bascule et sync L3/L4 valides, mais pas de FGCP complet |
 | **Inspection SSL/TLS profonde** | FortiGate native | Extension optionnelle | Squid SslBump demanderait une integration dediee |
 | **Inspection paquet niveau ASIC** | FortiGate | Logiciel uniquement | Un IDS type Suricata peut enrichir le socle |
-| **SIEM / corrélation** | Plateforme dédiée | Extension optionnelle | `Wazuh` reste la grande brique naturelle de Phase 4 |
+| **SIEM / corrélation** | Plateforme dédiée | Collecteur rsyslog léger + extension optionnelle | La collecte centrale est livrée, `Wazuh` reste la grande brique naturelle pour aller plus loin |
 | **Interface graphique** | GUI native | CLI + Uptime Kuma | Pédagogique différent mais formateur |
 
 ---

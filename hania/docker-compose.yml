@@ -47,6 +47,9 @@ services:
       SERVER_WAN_VIP: 10.20.0.2
       CLIENT_MGMT_VIP: 192.168.99.10
       SERVER_MGMT_VIP: 192.168.99.20
+      REMOTE_SYSLOG_HOST: 192.168.99.60
+      REMOTE_SYSLOG_PORT: "514"
+      REMOTE_SYSLOG_PROTOCOL: tcp
     networks:
       internet_net:
         ipv4_address: 200.0.0.11   # Noeud primaire, VIP publique = 200.0.0.10
@@ -98,6 +101,9 @@ services:
       SERVER_WAN_VIP: 10.20.0.2
       CLIENT_MGMT_VIP: 192.168.99.10
       SERVER_MGMT_VIP: 192.168.99.20
+      REMOTE_SYSLOG_HOST: 192.168.99.60
+      REMOTE_SYSLOG_PORT: "514"
+      REMOTE_SYSLOG_PROTOCOL: tcp
     networks:
       internet_net:
         ipv4_address: 200.0.0.12
@@ -156,6 +162,9 @@ services:
       PEER_VPN_WAN_IP: 10.20.0.2
       CONNTRACKD_LOCAL_IP: 192.168.99.21
       CONNTRACKD_PEER_IP: 192.168.99.22
+      REMOTE_SYSLOG_HOST: 192.168.99.60
+      REMOTE_SYSLOG_PORT: "514"
+      REMOTE_SYSLOG_PROTOCOL: tcp
     networks:
       wan_client_net:
         ipv4_address: 10.10.0.21   # Noeud primaire, VIP WAN = 10.10.0.2
@@ -216,6 +225,9 @@ services:
       PEER_VPN_WAN_IP: 10.20.0.2
       CONNTRACKD_LOCAL_IP: 192.168.99.22
       CONNTRACKD_PEER_IP: 192.168.99.21
+      REMOTE_SYSLOG_HOST: 192.168.99.60
+      REMOTE_SYSLOG_PORT: "514"
+      REMOTE_SYSLOG_PROTOCOL: tcp
     networks:
       wan_client_net:
         ipv4_address: 10.10.0.22
@@ -276,6 +288,9 @@ services:
       PEER_VPN_WAN_IP: 10.10.0.2
       CONNTRACKD_LOCAL_IP: 192.168.99.31
       CONNTRACKD_PEER_IP: 192.168.99.32
+      REMOTE_SYSLOG_HOST: 192.168.99.60
+      REMOTE_SYSLOG_PORT: "514"
+      REMOTE_SYSLOG_PROTOCOL: tcp
     networks:
       wan_server_net:
         ipv4_address: 10.20.0.21   # Noeud primaire, VIP WAN = 10.20.0.2
@@ -331,6 +346,9 @@ services:
       PEER_VPN_WAN_IP: 10.10.0.2
       CONNTRACKD_LOCAL_IP: 192.168.99.32
       CONNTRACKD_PEER_IP: 192.168.99.31
+      REMOTE_SYSLOG_HOST: 192.168.99.60
+      REMOTE_SYSLOG_PORT: "514"
+      REMOTE_SYSLOG_PROTOCOL: tcp
     networks:
       wan_server_net:
         ipv4_address: 10.20.0.22
@@ -428,6 +446,9 @@ services:
     hostname: webserver
     cap_add:
       - NET_ADMIN
+    environment:
+      SERVER_ROLE: webserver
+      ENABLE_SSH: "0"
     networks:
       lan_server_net:
         ipv4_address: 192.168.20.10
@@ -444,6 +465,16 @@ services:
     hostname: sshserver
     cap_add:
       - NET_ADMIN
+    environment:
+      SERVER_ROLE: sshserver
+      ENABLE_SSH: "1"
+      ENABLE_FAIL2BAN: "1"
+      SSH_PERMIT_ROOT_LOGIN: "no"
+      SSH_PASSWORD_AUTH: "no"
+      SSH_ALLOW_USERS: admin
+      REMOTE_SYSLOG_HOST: 192.168.20.60
+      REMOTE_SYSLOG_PORT: "514"
+      REMOTE_SYSLOG_PROTOCOL: tcp
     networks:
       lan_server_net:
         ipv4_address: 192.168.20.11
@@ -461,6 +492,8 @@ services:
     cap_add:
       - NET_ADMIN
     environment:
+      SERVER_ROLE: dmz-web
+      ENABLE_SSH: "0"
       GATEWAY_IP: 192.168.50.1
       DNS_SERVER: 10.20.0.1
       SEARCH_DOMAIN: labcyber.local
@@ -525,6 +558,21 @@ services:
       - "3001:3001"                # Accessible depuis l'hôte sur localhost:3001
     volumes:
       - uptime-kuma-data:/app/data
+    restart: unless-stopped
+
+  log-collector:
+    build:
+      context: .
+      dockerfile: monitoring/log-collector/Dockerfile
+    container_name: log-collector
+    hostname: log-collector
+    networks:
+      mgmt_net:
+        ipv4_address: 192.168.99.60
+      lan_server_net:
+        ipv4_address: 192.168.20.60
+    volumes:
+      - ./monitoring/log-collector/logs:/var/log/remote
     restart: unless-stopped
 
 ###############################################################################
