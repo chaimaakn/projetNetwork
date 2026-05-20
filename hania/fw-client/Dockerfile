@@ -1,12 +1,10 @@
-FROM debian:12-slim
+﻿FROM debian:12-slim
 
 # --- Installation des paquets équivalents aux fonctions FortiGate ---
-# strongswan  : VPN IPsec IKEv2 (équivalent VPN > IPsec FortiGate)
-# iptables    : firewall stateful (équivalent moteur de policies FortiGate)
-# dnsmasq     : DHCP serveur (équivalent DHCP FortiGate)
-# squid       : proxy + filtrage web (équivalent Web Filter FortiGate)
-# suricata    : IDS/IPS (équivalent IPS FortiGate) - optionnel
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# suricata a été retiré de Debian 12 stable (mai 2026) ;
+# on l'installe depuis bookworm-backports.
+RUN echo "deb http://deb.debian.org/debian bookworm-backports main" > /etc/apt/sources.list.d/backports.list \
+ && apt-get update && apt-get install -y --no-install-recommends \
     iptables \
     iproute2 \
     iputils-ping \
@@ -27,8 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     keepalived \
     conntrackd \
     conntrack \
-    suricata \
-    && rm -rf /var/lib/apt/lists/*
+ && apt-get install -y --no-install-recommends -t bookworm-backports suricata \
+ && rm -rf /var/lib/apt/lists/*
 
 COPY fw-client/ipsec.conf      /opt/lab/ipsec.conf.tmpl
 COPY fw-client/ipsec.secrets   /etc/ipsec.secrets
