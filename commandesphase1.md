@@ -368,6 +368,42 @@ sudo bash scripts/test-connectivity.sh
 > "Ce script automatise tous les tests de connectivité.
 > Il vérifie : intra-LAN, cross-VPN HTTP et SSH, NAT Internet, DNS.
 > Tous les tests passent — l'infrastructure est fonctionnelle."
+Structure générale
+Il définit d'abord des fonctions utilitaires :
+
+ok() — affiche en vert [OK]
+fail() — affiche en rouge [FAIL] et incrémente un compteur d'erreurs
+ping_check() — teste un ping entre deux containers
+wait_for_container_shell() — réessaie une commande plusieurs fois avec délai (utile pour les services lents à démarrer)
+wait_for_vpn() — attend que le tunnel IPsec soit établi avant de continuer
+
+
+Tests effectués dans l'ordre
+1. Tests intra-LAN
+Vérifie que les machines du même réseau se voient :
+
+client1 → client2 (même LAN_CLIENT)
+client1 → FW_CLIENT gateway (192.168.10.1)
+
+2. Tests vers les firewalls
+
+client1 → FW_ISP (10.10.0.1) — vérifie que le WAN est joignable
+webserver → FW_SERVER (192.168.20.1) — vérifie la gateway du LAN_SERVER
+
+3. Tests cross-LAN via VPN
+C'est le test le plus important — il attend d'abord que le tunnel IPsec soit ESTABLISHED, puis vérifie :
+
+HTTP depuis client1 vers webserver (trafic qui traverse le VPN)
+SSH depuis client1 vers sshserver (trafic qui traverse le VPN)
+
+4. Test Internet
+
+client1 → 8.8.8.8 — vérifie que le NAT fonctionne et qu'Internet est accessible
+
+5. Test DNS
+
+Résolution de web.labcyber.local depuis client1 — vérifie que dnsmasq sur FW_ISP répond correctement
+
 
 ---
 
